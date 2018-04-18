@@ -34,7 +34,7 @@ public class HhObjectMapper implements HhObjectMapperIf {
 		
 
     	int[] personTypes = abmData.getPersonTypeArray( hhid );
-    	int[] usualCarIds = abmData.getUsualCarIdArray( hhid );
+    	int[][] usualCarIds = abmData.getUsualCarIdArray( hhid );
     	int numHhMembers = personTypes.length - 1;
     	int numAutos = abmData.getNumAutos(hhid);
     	int homeMaz = abmData.getHomeMaz(hhid);

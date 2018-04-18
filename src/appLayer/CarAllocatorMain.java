@@ -63,9 +63,11 @@ import com.pb.common.util.ResourceUtil;
 
 
 
+
 import fileProcessing.AbmDataStore;
 import fileProcessing.GlobalProperties;
 import fileProcessing.ParameterReader;
+import fileProcessing.PurposeCategories;
 import objectMapping.AbmObjectTranslater;
 import objectMapping.HhObjectMapper;
 import objects.AbmDataVehicleIdMap;
@@ -228,10 +230,10 @@ public class CarAllocatorMain {
         PrintWriter outStreamCar = null;
         try {
         	outStreamTrip = new PrintWriter( new BufferedWriter( new FileWriter( outputTripListFilename ) ) );
-            String header1 = "hhid,pnum,tripid,tripRecNum,mode,vehId,origPurp,destPurp,origMaz,destMaz,plannedDepartureTime,departureEarly,departureLate,finalDeparture, finalArrival,x1,x2,x3,x4,unsatisfiedResult,numIterationIntegerizing";
+            String header1 = "hhid,pnum,tripid,tripRecNum,mode,vehId,origPurp,destPurp,origMaz,destMaz,origTaz,destTaz,distanceFromHome,plannedDepartureTime,departureEarly,departureLate,finalDeparture, finalArrival,x1,x2,x3,x4,unsatisfiedResult,numIterationIntegerizing";
             outStreamTrip.println( header1 );   
             outStreamCar = new PrintWriter( new BufferedWriter( new FileWriter( outputDisaggregateCarUseFileName ) ) );
-            String header2 = "hhid,carId,aVStatus,autoTripId,autoHhTripId,driverId,destPurp,origMaz,destMaz,origTaz,destTaz,carRepositionType,tripDistance,plannedDeparture,finalDeparture,finalArrival,departureEarly,departureLate,parkDurationAtDestination,ParkCostAtDestination,parkDurationAtNextOrigin,parkCostAtNextOrigin";
+            String header2 = "hhid,carId,aVStatus,autoTripId,autoHhTripId,driverId,origPurp,destPurp,origMaz,destMaz,origTaz,destTaz,carRepositionType,origHome,destHome,tripDistance,distanceFromHomeToOrig,distanceFromHomeToDest,plannedDeparture,finalDeparture,finalArrival,departureEarly,departureLate,parkDurationAtDestination,ParkCostAtDestination,parkDurationAtNextOrigin,parkCostAtNextOrigin";
             outStreamCar.println( header2 );   
             
         }
@@ -336,8 +338,11 @@ public class CarAllocatorMain {
                 //trip.getVehId(),trip.getOrigAct(), trip.getDestAct(), trip.getOrigMaz(), trip.getDestMaz(), trip.getSchedDepart(), depEarly, depLate );
                 float finalDeparture = trip.getSchedDepart()- depEarly+depLate;
                 float finalArrival = finalDeparture + trip.getSchedTime();
+                int origTaz = geogManager.getMazTazValue(trip.getOrigMaz());
+                int destTaz = geogManager.getMazTazValue(trip.getDestMaz());
+                float tripDistanceFromHome = distanceFromHome[geogManager.getMazTazValue(trip.getDestMaz())];
                 String record = hh.getId()+","+ trip.getPnum()+","+ trip.getUniqueTripId()+","+ trip.getTripRecNum()+","+trip.getMode()+","+
-                        		trip.getVehId()+","+trip.getOrigAct()+","+ trip.getDestAct()+","+ trip.getOrigMaz()+","+ trip.getDestMaz()+","+ trip.getSchedDepart()+","+ depEarly+","+ depLate +","+finalDeparture+","+finalArrival+","+
+                        		trip.getVehId()+","+trip.getOrigAct()+","+ trip.getDestAct()+","+ trip.getOrigMaz()+","+ trip.getDestMaz()+","+ origTaz + ","+ destTaz+","+tripDistanceFromHome+","+trip.getSchedDepart()+","+ depEarly+","+ depLate +","+finalDeparture+","+finalArrival+","+
                         		xij[0]+","+xij[1]+","+xij[2]+","+xij[3] + ","+ unsatisRes + ","+ depArrObj.getNumIterationsForIntegerizing();
                         
                 outStreamTrip.println( record );            
@@ -354,6 +359,8 @@ public class CarAllocatorMain {
             }
             int[] carUsed = new int[numAuto];
             int autoTripID = 1;
+            int destHome = 0;
+            int origHome = 0;
             for ( int i=0; i < aTrips.size(); i++ ) {
             	totalDemand++;
             	AutoTrip trip = aTrips.get(i);
@@ -375,7 +382,10 @@ public class CarAllocatorMain {
                 float depLate = (float)depArrResults[CarAllocation.DEP_LATE][trip.getPnum()][trips.get(trip.getHhTripId()).getIndivTripId()];
                 float scheduleDepart = trip.getSchedDepart();
                 float scheduleArrive = scheduleDepart+trip.getSchedTime();
+                float tripDistanceFromHome = distanceFromHome[destTaz];
+                float tripDistanceFromHomeToOrig = distanceFromHome[origTaz];
                 String record =null;
+                int tripSatisfied = 0;
             	for( int j = 0; j < carAllocationForTrip.length; j ++){
             	   	double[] SikForTrip = carLinkingResults[CarAllocation.INDEX_SameTripParkDi][j][i];
                 	double[] GikForTrip = carLinkingResults[CarAllocation.INDEX_SameTripParkOk][j][i];
@@ -402,15 +412,21 @@ public class CarAllocatorMain {
             		}
             		
             		if(carTripAllocation == 1){
+            			tripSatisfied= 1;
             			carUsed[j] = 1;
             			// add first empty trip (if any)
                 		if(carAllocationFirstTrip[j]>threhsoldRoundUp && trip.getOrigAct() > 0){
                 			autoRecordDistance = distanceFromHome[origTaz];
                 			float departureTime = (scheduleDepart + depLate - depEarly) - Float.parseFloat(propertyMap.get("minutes.per.mile"))*autoRecordDistance;
+                			tripDistanceFromHome = distanceFromHome[geogManager.getMazTazValue(trip.getOrigMaz())];
+                			tripDistanceFromHomeToOrig = distanceFromHome[homeTaz];
+                			destHome = trip.getOrigAct() == PurposeCategories.HOME.getIndex() ? 1 : 0;
+                			origHome = 1;
                 			record = hh.getId()+","+
                 					(j+1)+","+
                 					ifAvHh+","+
                 					autoTripID +","+
+                					0+","+
                 					0+","+
                 					0+","+
                 					TRIP_REPOSITIONING_PURPOSE+","+
@@ -419,7 +435,11 @@ public class CarAllocatorMain {
                 					geogManager.getMazTazValue(hh.getHomeMaz())+","+
                 					geogManager.getMazTazValue(trip.getOrigMaz())+","+
                 					"-1"+","+
+                					origHome+","+
+                					destHome+","+
                 					autoRecordDistance +","+
+                					tripDistanceFromHomeToOrig+","+
+                					tripDistanceFromHome+","+
                 					departureTime+","+
                 					departureTime + ","+
                 					(scheduleDepart + depLate - depEarly)+","+
@@ -441,19 +461,28 @@ public class CarAllocatorMain {
                 			
             			}
                 		//Add actual person trip
+                		tripDistanceFromHome = distanceFromHome[geogManager.getMazTazValue(trip.getDestMaz())];
+                		tripDistanceFromHomeToOrig = distanceFromHome[geogManager.getMazTazValue(trip.getOrigMaz())];
+                		destHome = trip.getDestAct() == PurposeCategories.HOME.getIndex() ? 1 : 0;
+                		origHome = trip.getOrigAct() == PurposeCategories.HOME.getIndex() ? 1 : 0;
             			record = hh.getId()+","+
             					(j+1)+","+
             					ifAvHh+","+
             					autoTripID +","+
             					(hhTripId+1)+","+
             					trip.getPnum()+","+
+            					trip.getOrigAct()+","+
             					trip.getDestAct()+","+
             					trip.getOrigMaz()+","+
             					trip.getDestMaz()+","+
             					geogManager.getMazTazValue(trip.getOrigMaz())+","+
             					geogManager.getMazTazValue(trip.getDestMaz())+","+
             					carRepoType  + ","+
+            					origHome+","+
+            					destHome  + ","+
             					tripDistance + ","+
+            					tripDistanceFromHomeToOrig + ","+
+            					tripDistanceFromHome+","+
             					trip.getSchedDepart()+","+
             					(trip.getSchedDepart()+depLate-depEarly)+","+
             					(trip.getSchedDepart()+depLate-depEarly+trip.getSchedTime())+","+
@@ -480,7 +509,8 @@ public class CarAllocatorMain {
                             float nextDepLate = (float)depArrResults[CarAllocation.DEP_LATE][nextTrip.getPnum()][trips.get(nextTrip.getHhTripId()).getIndivTripId()];
                             int nextOrigTaz = geogManager.getMazTazValue(nextTrip.getOrigMaz());
                             int nextDestTaz = geogManager.getMazTazValue(nextTrip.getDestMaz());
-                            
+                            destHome = nextTrip.getOrigAct() == PurposeCategories.HOME.getIndex() ? 1 : 0;
+                            origHome = trip.getDestAct() == PurposeCategories.HOME.getIndex() ? 1 : 0;
             				if(((SikForTrip[k]>threhsoldRoundUp & trip.getPnum() != nextTrip.getPnum())||GikForTrip[k]>threhsoldRoundUp) && destTaz != nextOrigTaz){ // no need to write intra-zonal car reposition trip
             					autoRecordDistance = sharedDistanceObject.getOffpeakDistanceFromTaz(origTaz)[geogManager.getMazTazValue(nextTrip.getOrigMaz())];
                     			float departureTime = (scheduleDepart + trip.getSchedTime() + depLate - depEarly) ;
@@ -491,19 +521,26 @@ public class CarAllocatorMain {
                     				departureTime = (nextTrip.getSchedDepart() + depLateNext - depEarlyNext) - Float.parseFloat(propertyMap.get("minutes.per.mile"))*autoRecordDistance;
                     				arrivalTime = (nextTrip.getSchedDepart() + depLateNext - depEarlyNext);
                     			}
+                    			tripDistanceFromHome = distanceFromHome[nextOrigTaz];
+                    			tripDistanceFromHomeToOrig = distanceFromHome[destTaz];
             					record = hh.getId()+","+
                     					(j+1)+","+
                     					ifAvHh+","+
                     					autoTripID +","+
                     					0+","+
                     					0+","+
+                    					trip.getDestAct()+","+
                     					TRIP_REPOSITIONING_PURPOSE+","+
                     					trip.getDestMaz()+","+
                     					nextTrip.getOrigMaz()+","+
                     					origTaz+","+
                     					nextOrigTaz+","+
                     					"-1"+","+
+                    					origHome+","+
+                    					destHome+","+
                     					autoRecordDistance+","+
+                    					tripDistanceFromHomeToOrig+","+
+                    					tripDistanceFromHome+","+
                     					departureTime+","+
                     					departureTime+","+
                     					arrivalTime+ ","+
@@ -528,20 +565,28 @@ public class CarAllocatorMain {
             				if(HikForTrip[k]>threhsoldRoundUp){
             					autoRecordDistance =distanceToHome[destTaz];
                     			float departureTime = (scheduleDepart + trip.getSchedTime() + depLate - depEarly);
-                    			
+                    			tripDistanceFromHome = distanceFromHome[geogManager.getMazTazValue(hh.getHomeMaz())];
+                    			tripDistanceFromHomeToOrig = distanceFromHome[destTaz];
+                    			destHome = 1;
+                    			origHome = trip.getDestAct() == PurposeCategories.HOME.getIndex() ? 1 : 0;
             					record = hh.getId()+","+
                     					(j+1)+","+
                     					ifAvHh+","+
                     					autoTripID +","+
                     					0+","+
                     					0+","+
+                    					trip.getDestAct()+","+
                     					TRIP_REPOSITIONING_PURPOSE+","+
                     					trip.getDestMaz()+","+
                     					hh.getHomeMaz()+","+
                     					geogManager.getMazTazValue(trip.getDestMaz())+","+
                     					geogManager.getMazTazValue(hh.getHomeMaz())+","+
                     					"-1"+","+
+                    					origHome+","+
+                    					destHome+","+
                     					autoRecordDistance + ","+
+                    					tripDistanceFromHomeToOrig+ ","+
+                    					tripDistanceFromHome+","+
                     					departureTime+","+
                     					departureTime+","+
                     					(departureTime+autoRecordDistance*Float.parseFloat(propertyMap.get("minutes.per.mile")))+","+
@@ -562,14 +607,18 @@ public class CarAllocatorMain {
                     			}
                     			
                     			autoRecordDistance =distanceFromHome[nextOrigTaz];
-                    			departureTime = (nextTrip.getSchedDepart() +  nextDepLate - nextDepEarly) -  - Float.parseFloat(propertyMap.get("minutes.per.mile"))*autoRecordDistance;
+                    			departureTime = (nextTrip.getSchedDepart() +  nextDepLate - nextDepEarly) - Float.parseFloat(propertyMap.get("minutes.per.mile"))*autoRecordDistance;
                     			
-                    			
+                    			tripDistanceFromHome = distanceFromHome[geogManager.getMazTazValue(nextTrip.getOrigMaz())];
+                    			tripDistanceFromHomeToOrig = distanceFromHome[homeTaz];
+                    			destHome = nextTrip.getOrigAct() == PurposeCategories.HOME.getIndex() ? 1 : 0;
+                    			origHome = 1;
                     			record = hh.getId()+","+
                         					(j+1)+","+
                         					ifAvHh+","+
                         					autoTripID +","+
                         					(i+1)+","+
+                        					0+","+
                         					0+","+
                         					TRIP_REPOSITIONING_PURPOSE+","+
                         					hh.getHomeMaz()+","+
@@ -577,7 +626,11 @@ public class CarAllocatorMain {
                         					geogManager.getMazTazValue(hh.getHomeMaz())+","+
                         					geogManager.getMazTazValue(nextTrip.getOrigMaz())+","+
                         					"-1"+","+
+                        					origHome+","+
+                        					destHome+","+
                         					autoRecordDistance + ","+
+                        					tripDistanceFromHomeToOrig+ ","+
+                        					tripDistanceFromHome+","+
                         					departureTime+","+
                         					departureTime+","+
                         					(nextTrip.getSchedDepart() +  nextDepLate - nextDepEarly) +","+
@@ -608,20 +661,28 @@ public class CarAllocatorMain {
                 		if(carAllocationLastTrip[j]>threhsoldRoundUp && trip.getDestAct() > 0){
                 			autoRecordDistance =distanceToHome[destTaz];
                 			float departureTime = (scheduleDepart + trip.getSchedTime() + depLate - depEarly);
-                		
+                			tripDistanceFromHome = distanceFromHome[geogManager.getMazTazValue(hh.getHomeMaz())];
+                			tripDistanceFromHomeToOrig = distanceFromHome[origTaz];
+                			destHome = 1;
+                			origHome = trip.getOrigAct() == PurposeCategories.HOME.getIndex() ? 1 : 0;
                 			record = hh.getId()+","+
                 					(j+1)+","+
                 					ifAvHh+","+
                 					autoTripID +","+
                 					0+","+
                 					0+","+
-                					TRIP_REPOSITIONING_PURPOSE+","+            					
+                					trip.getOrigAct()+ ","+
+                					TRIP_REPOSITIONING_PURPOSE+","+    
                 					trip.getDestMaz()+","+
                 					hh.getHomeMaz()+","+
                 					geogManager.getMazTazValue(trip.getDestMaz())+","+
                 					geogManager.getMazTazValue(hh.getHomeMaz())+","+
-                					"-1"+","+
+                					"-1"+","+ 
+                					origHome+","+
+                					destHome +","+   
                 					autoRecordDistance + ","+
+                					tripDistanceFromHomeToOrig+ ","+
+                					tripDistanceFromHome+","+
                 					departureTime+","+
                 					departureTime+","+
                 					(departureTime+autoRecordDistance*Float.parseFloat(propertyMap.get("minutes.per.mile")))+","+
@@ -645,6 +706,38 @@ public class CarAllocatorMain {
             			}
             		}
             		            		
+            	}
+            	//Add unmet demand
+            	if(tripSatisfied == 0){
+            		//Add actual person trip
+            		tripDistanceFromHome = distanceFromHome[geogManager.getMazTazValue(trip.getDestMaz())];
+            		tripDistanceFromHomeToOrig = distanceFromHome[geogManager.getMazTazValue(trip.getOrigMaz())];
+            		destHome = trip.getDestAct() == PurposeCategories.HOME.getIndex() ? 1 : 0;
+            		origHome = trip.getOrigAct() == PurposeCategories.HOME.getIndex() ? 1 : 0;
+        			record = hh.getId()+","+
+        					"-1"+","+
+        					ifAvHh+","+
+        					autoTripID +","+
+        					(hhTripId+1)+","+
+        					trip.getPnum()+","+
+        					trip.getOrigAct()+","+
+        					trip.getDestAct()+","+
+        					trip.getOrigMaz()+","+
+        					trip.getDestMaz()+","+
+        					geogManager.getMazTazValue(trip.getOrigMaz())+","+
+        					geogManager.getMazTazValue(trip.getDestMaz())+","+
+        					carRepoType  + ","+
+        					origHome+","+
+        					destHome  + ","+
+        					tripDistance + ","+
+        					tripDistanceFromHomeToOrig + ","+
+        					tripDistanceFromHome+","+
+        					trip.getSchedDepart()+","+
+        					(trip.getSchedDepart()+depLate-depEarly)+","+
+        					(trip.getSchedDepart()+depLate-depEarly+trip.getSchedTime())+","+
+        					depEarly+","+
+        					depLate;
+        			outStreamCar.println( record );  
             	}
           	}
          

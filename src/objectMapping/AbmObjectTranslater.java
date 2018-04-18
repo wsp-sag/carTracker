@@ -345,13 +345,13 @@ public class AbmObjectTranslater {
 			
 
 				String departValue = record.get( fieldIndexMap.get(tripDepartMinuteField) );
-				float depart = Float.parseFloat( departValue );
+				float depart = Math.round(Float.parseFloat( departValue )*100)/100;
 				
 				String arriveValue = record.get( fieldIndexMap.get(tripArriveMinuteField) );
-				float arrive = Float.parseFloat( arriveValue );
+				float arrive =  Math.round(Float.parseFloat( arriveValue )*100)/100;
 
 				String durationValue = record.get( fieldIndexMap.get(actDurationField) );
-				activityDuration[tripNum] = Float.parseFloat( durationValue );		
+				activityDuration[tripNum] =  (Math.round(Float.parseFloat( durationValue )*100)/100);		
 				
 				//MAG String timeValue = record.get( TRIP_PLANNED_TRAVEL_MINUTES_FIELD_INDEX );
 				//MAG indivPlannedTravelTimes[tripNum] = (int)( Float.parseFloat( timeValue ) );
@@ -938,7 +938,7 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 		
 	}
 
-	public int[] getUsualCarIdArray( int hhid ) {
+	public int[][] getUsualCarIdArray( int hhid ) {
 		
 		// get a map of file field numbers to tripRecord field positions
 		Map<String,Integer> fieldIndexMap = dataStore.getPersonFieldIndexMap();
@@ -946,16 +946,16 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 				
 		List<List<String>> personRecords = dataStore.getPersonRecords( hhid );
 		
-		int[] personTypes = new int[ personRecords.size()+1 ];
+		int[][] usualCars = new int[ personRecords.size()+1 ][];
 		
 		int pnum = 1;
 		for ( List<String> record : personRecords ) {
 			String usualCarIdFieldValue = record.get( persRecordIndex );
-			int personTypeIndex = Integer.parseInt( usualCarIdFieldValue );
-			personTypes[pnum++] = personTypeIndex; 
+			int[] usualCarsForPerson = Parsing.getOneDimensionalIntArrayValuesFromExportString(usualCarIdFieldValue );
+			usualCars[pnum++] = usualCarsForPerson; 
 		}
 		
-		return personTypes;
+		return usualCars;
 		
 	}
 	

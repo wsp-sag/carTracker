@@ -83,7 +83,9 @@ public class CarAllocation
 
     
     //public static final int M_BIG_CONSTANT = Integer.MAX_VALUE;
-    public static final long M_BIG_CONSTANT = (long) (Math.pow(2, 35)-1);
+    public static final long M_BIG_CONSTANT = (long) (Math.pow(2, 25)-1);
+    public static final long NON_AV_REPO_COST = (long) (Math.pow(2, 15)-1);
+    
     
     private static final int MAX_ACT_INDEX = 9;
     
@@ -179,6 +181,7 @@ public class CarAllocation
 	boolean reportFinalSolution = false;
     static {
     	
+    	
         System.loadLibrary("jniortools");
         
     }
@@ -204,15 +207,17 @@ public class CarAllocation
 		intraZonalGikSamePersonPenalty = Float.parseFloat(propertyMap.get(GlobalProperties.INTRA_ZONAL_GIK_SAME_PERSON.toString()));
 		logHhId= Integer.parseInt(propertyMap.get("log.report.hh.id"));
 		minimumActivityDuration= Float.parseFloat(propertyMap.get("min.activity.duration"));
+		
     }
 
     
-    public MPSolver setupLp( Household hh, int endOfSimulationMinute,int[][] xijIntergerization, int[][] xijFixFlag, String solverType ) {
+    public MPSolver setupLp( Household hh, int endOfSimulationMinute,int[][] xijIntergerization, int[][] xijFixFlag,int[][][] sikjIntergerization, int[][][] sikjFixFlag,int[][][] gikjIntergerization, int[][][] gikjFixFlag, String solverType ) {
     	
         MPSolver solver = null;
         try {
             solver = new MPSolver( "SolveCbc", MPSolver.OptimizationProblemType.valueOf( solverType ) );
         }
+        
         catch (java.lang.IllegalArgumentException e) {
             throw new Error(e);
         }
@@ -220,8 +225,8 @@ public class CarAllocation
         variableNameList = new ArrayList<String>();
         constraintNameList = new ArrayList<String>();
         ofCoeffList = new ArrayList<Float>();
-        
-    	setupObjectiveFunctionVariablesAndCoefficients( hh, solver, endOfSimulationMinute,xijIntergerization,xijFixFlag );
+    	setupObjectiveFunctionVariablesAndCoefficients( hh, solver, endOfSimulationMinute,xijIntergerization,xijFixFlag,sikjIntergerization, sikjFixFlag,gikjIntergerization, gikjFixFlag);
+    	
     	setupContraints( hh, solver, endOfSimulationMinute );
     	reportFinalSolution = false;
     	if(logHhId == hh.getId()){
@@ -235,7 +240,8 @@ public class CarAllocation
     
 
     
-    private void setupObjectiveFunctionVariablesAndCoefficients( Household hh, MPSolver solver, int endOfSimulationMinute, int[][] xijIntergerization, int[][] xijFixFlag ) {
+    private void setupObjectiveFunctionVariablesAndCoefficients( Household hh, MPSolver solver, int endOfSimulationMinute, int[][] xijIntergerization, 
+    		int[][] xijFixFlag,int[][][] sikjIntergerization, int[][][] sikjFixFlag,int[][][] gikjIntergerization, int[][][] gikjFixFlag ) {
     	
     	try {
     		
@@ -296,17 +302,17 @@ public class CarAllocation
         		double parkCostSik = 0;       		
         		double parkCostGik = 0;   
         			
-        		int usualCarForPerson = persons[aTrip.getPnum()].getUsualCarId();
+        		int[] usualCarsForPerson = persons[aTrip.getPnum()].getUsualCarId();
         		
         		float[] distanceFromEndTrip = sharedDistanceObject.getOffpeakDistanceFromTaz(destTaz);
 
         		
-        		float reposCostHD = repoCostForHh*(distanceFromHome[destTaz]);
-        		float reposCostOH = repoCostForHh*(distanceToHome[origTaz]);
+        		float reposCostHD = repoCostForHh*(distanceFromHome[origTaz]);
+        		float reposCostOH = repoCostForHh*(distanceToHome[destTaz]);
         		
         		if(hh.getIfAvHousehold() == 0 ){
-        			reposCostHD = M_BIG_CONSTANT;
-        			reposCostOH = M_BIG_CONSTANT;
+        			reposCostHD = NON_AV_REPO_COST;
+        			reposCostOH = NON_AV_REPO_COST;
         			
         		}
         		
@@ -321,10 +327,7 @@ public class CarAllocation
         		
         		// IJ Variables (trip and auto)
         		for ( int j=0; j < numAutos; j++ )     {   		
-        			int usualDrDummy = 0;
-        			if(j+1 == usualCarForPerson) //Usual car Ids are 1-based index
-        				usualDrDummy  = 1 ; 
-            		
+        			int usualDrDummy = usualCarsForPerson[j];
         			
         			// F6
         			float lowerBound = 0;
@@ -336,7 +339,7 @@ public class CarAllocation
 	        				uppperBound = xijIntergerization[i][j];
         				}
         			}
-        			ofVarsIJ[INDEX_CarAllo ][i][j] = solver.makeNumVar( lowerBound, uppperBound, ( name = "CarAlloc_"+i+"_"+j ) );
+        			ofVarsIJ[INDEX_CarAllo ][i][j] = solver.makeIntVar( lowerBound, uppperBound, ( name = "CarAlloc_"+i+"_"+j ) );
                     objective.setCoefficient( ofVarsIJ[INDEX_CarAllo][i][j], -usualDrBonus*usualDrDummy); //j is added for singularity
                     ofCoeffList.add( -usualDrBonus*usualDrDummy );
             		variableNameList.add( name );     
@@ -412,6 +415,12 @@ public class CarAllocation
 	        		float penaltyForGik = 0;
 	        		if(pairLi && samePerson)
 	        			penaltyForGik= intraZonalGikSamePersonPenalty;
+	        		
+	        		//reposition cost to avoid switches for intra-zonal
+	        		if(pairLi && ((ad == PurposeCategories.HOME.getIndex()&& nextAo != PurposeCategories.HOME.getIndex())|| nextAo == PurposeCategories.HOME.getIndex()&& ad != PurposeCategories.HOME.getIndex()) ){
+	        			reposCostToNextTripOrigSik=repoCostForHh*distanceToNextOrig;
+	        			reposCostToNextTripOrigGik=repoCostForHh*distanceToNextOrig;
+	        		}
 	        		 
 	        		// calculate parking cost at destination (for Sik)
 	        		if(ad == PurposeCategories.WORK.getIndex() ||ad == PurposeCategories.BUSINESS.getIndex() || ad == PurposeCategories.SCHOOL.getIndex() ||
@@ -430,29 +439,51 @@ public class CarAllocation
 	        					nextATrip.getSchedTime() - aTrip.getSchedTime())/60;
 	        		
 	        		// no parking cost for zero
-	        		if(ad == 0)
+	        		if(ad == 0){
 	        			parkCostSik = 0;
 	        		
+	        		}
 	        		if(nextAo == 0)
 	        			parkCostGik = 0;
 	        		
 	        		// set repositioning cost to very high value if non-AV hh and not starting in the same taz
 	        		if(hh.getIfAvHousehold() == 0 ){
-	        			reposCostToNextTripOrigGik = M_BIG_CONSTANT;
-	        			reposCostToHome = M_BIG_CONSTANT;
+	        			reposCostToNextTripOrigGik = NON_AV_REPO_COST;
+	        			reposCostToHome = NON_AV_REPO_COST;
 	        			if(!pairLi)
-	        				reposCostToNextTripOrigSik = M_BIG_CONSTANT;
+	        				reposCostToNextTripOrigSik = NON_AV_REPO_COST;
 	        		}
 	        		for ( int j=0; j < numAutos; j++ )     { 			
 		        		//F2, F4
-	        			ofVarsIJK[INDEX_SameTripParkDi ][i][k][j] = solver.makeNumVar( 0.0, 1, ( name = "ParkDi_"+i+"_"+k+"_"+j ) );
+	        			
+	        			float lowerBoundS = 0;
+	        			float uppperBoundS = 1;
+	        			
+	        			if(sikjIntergerization!= null){
+	        				if(sikjFixFlag[j][i][k] == 1){
+		        				lowerBoundS = sikjIntergerization[j][i][k];
+		        				uppperBoundS = sikjIntergerization[j][i][k];
+	        				}
+	        			}
+	        			
+	        			float lowerBoundG= 0;
+	        			float uppperBoundG = 1;
+	        			
+	        			if(gikjIntergerization!= null){
+	        				if(gikjFixFlag[j][i][k] == 1){
+		        				lowerBoundG = gikjIntergerization[j][i][k];
+		        				uppperBoundG = gikjIntergerization[j][i][k];
+	        				}
+	        			}
+	        			
+	        			ofVarsIJK[INDEX_SameTripParkDi ][i][k][j] = solver.makeIntVar( lowerBoundS, uppperBoundS, ( name = "ParkDi_"+i+"_"+k+"_"+j ) );
 	                    objective.setCoefficient( ofVarsIJK[INDEX_SameTripParkDi][i][k][j], reposCostToNextTripOrigSik + parkCostSik);
 	                    ofCoeffList.add( (float) (reposCostToNextTripOrigSik + parkCostSik) );
 	            		variableNameList.add( name );
 	            		//ofVarsIJK[INDEX_SameTripParkDi ][i][k][j].setInteger(true);
 	            		
 	            		//F2, F4
-	            		ofVarsIJK[INDEX_SameTripParkOk ][i][k][j] = solver.makeNumVar( 0.0, 1, ( name = "ParkOk_"+i+"_"+k+"_"+j ) );
+	            		ofVarsIJK[INDEX_SameTripParkOk ][i][k][j] = solver.makeIntVar( lowerBoundG, uppperBoundG, ( name = "ParkOk_"+i+"_"+k+"_"+j ) );
 	                    objective.setCoefficient( ofVarsIJK[INDEX_SameTripParkOk][i][k][j], reposCostToNextTripOrigGik + parkCostGik + penaltyForGik);
 	                    ofCoeffList.add( (float) (reposCostToNextTripOrigGik + parkCostGik + penaltyForGik) );
 	            		variableNameList.add( name );
@@ -679,24 +710,24 @@ public class CarAllocation
 	    			float nextTripPlanDep = nextATrip.getSchedDepart();
 	    			float nextTripTravelTime = nextATrip.getSchedTime();
 	    		
-	    			rhsLP3[INDEX_4_1][i][k][j]= M_BIG_CONSTANT + autoTripPlanDepTime-nextTripPlanDep - autoTravelTime - distanceToNextOrig*minutesPerMile;
+	    			rhsLP3[INDEX_4_1][i][k][j]= M_BIG_CONSTANT  - autoTripPlanDepTime +nextTripPlanDep - autoTravelTime - distanceToNextOrig*minutesPerMile;
 	    			constraintsLP3[INDEX_4_1][i][k][j] = solver.makeConstraint(-MPSolver.infinity(), rhsLP3[INDEX_4_1][i][k][j], (name = "Const_4_1"+"_" + i+  "_"+k+"_"+j));    		
 	    			constraintsLP3[INDEX_4_1][i][k][j].setCoefficient(ofVarsIJK[INDEX_SameTripParkDi][i][k][j], M_BIG_CONSTANT);
 	    			constraintsLP3[INDEX_4_1][i][k][j].setCoefficient(ofVarsIJK[INDEX_SameTripParkOk][i][k][j], M_BIG_CONSTANT);
 	    			constraintsLP3[INDEX_4_1][i][k][j].setCoefficient(ofVarsIJK[INDEX_SameTripParkOk][i][k][j], M_BIG_CONSTANT);
-	    			constraintsLP3[INDEX_4_1][i][k][j].setCoefficient(ofVarsP[INDEX_DepLate][pnum][personTripId], -1); 
-	    			constraintsLP3[INDEX_4_1][i][k][j].setCoefficient(ofVarsP[INDEX_DepLate][pnumNext][personNextTripId], 1);
-	    			constraintsLP3[INDEX_4_1][i][k][j].setCoefficient(ofVarsP[INDEX_DepEarly][pnum][personTripId], 1);
-	    			constraintsLP3[INDEX_4_1][i][k][j].setCoefficient(ofVarsP[INDEX_DepEarly][pnumNext][personNextTripId], -1);
+	    			constraintsLP3[INDEX_4_1][i][k][j].setCoefficient(ofVarsP[INDEX_DepLate][pnum][personTripId], 1); 
+	    			constraintsLP3[INDEX_4_1][i][k][j].setCoefficient(ofVarsP[INDEX_DepLate][pnumNext][personNextTripId], -1);
+	    			constraintsLP3[INDEX_4_1][i][k][j].setCoefficient(ofVarsP[INDEX_DepEarly][pnum][personTripId], -1);
+	    			constraintsLP3[INDEX_4_1][i][k][j].setCoefficient(ofVarsP[INDEX_DepEarly][pnumNext][personNextTripId], 1);
 	    			constraintNameList.add( name );
 	    			
-	    			rhsLP3[INDEX_4_2][i][k][j]= M_BIG_CONSTANT + autoTripPlanDepTime-nextTripPlanDep - autoTravelTime - (distanceToNextOrig+distanceToHomeFromEndOfCurrent + distanceHomeToNextOrig)*minutesPerMile;
+	    			rhsLP3[INDEX_4_2][i][k][j]= M_BIG_CONSTANT - autoTripPlanDepTime+nextTripPlanDep - autoTravelTime - (distanceToNextOrig+distanceToHomeFromEndOfCurrent + distanceHomeToNextOrig)*minutesPerMile;
 	    			constraintsLP3[INDEX_4_2][i][k][j] = solver.makeConstraint(-MPSolver.infinity(), rhsLP3[INDEX_4_2][i][k][j], (name = "Const_4_2"+"_" + i+  "_"+k+"_"+j));    		
 	    			constraintsLP3[INDEX_4_2][i][k][j].setCoefficient(ofVarsIJK[INDEX_SameTripParH][i][k][j], M_BIG_CONSTANT);
-	    			constraintsLP3[INDEX_4_2][i][k][j].setCoefficient(ofVarsP[INDEX_DepLate][pnum][personTripId], -1); 
-	    			constraintsLP3[INDEX_4_2][i][k][j].setCoefficient(ofVarsP[INDEX_DepLate][pnumNext][personNextTripId], 1);
-	    			constraintsLP3[INDEX_4_2][i][k][j].setCoefficient(ofVarsP[INDEX_DepEarly][pnum][personTripId], 1);
-	    			constraintsLP3[INDEX_4_2][i][k][j].setCoefficient(ofVarsP[INDEX_DepEarly][pnumNext][personNextTripId], -1);
+	    			constraintsLP3[INDEX_4_2][i][k][j].setCoefficient(ofVarsP[INDEX_DepLate][pnum][personTripId], 1); 
+	    			constraintsLP3[INDEX_4_2][i][k][j].setCoefficient(ofVarsP[INDEX_DepLate][pnumNext][personNextTripId], -1);
+	    			constraintsLP3[INDEX_4_2][i][k][j].setCoefficient(ofVarsP[INDEX_DepEarly][pnum][personTripId], -1);
+	    			constraintsLP3[INDEX_4_2][i][k][j].setCoefficient(ofVarsP[INDEX_DepEarly][pnumNext][personNextTripId], 1);
 	    			constraintNameList.add( name );
 	    			
 	    			/*

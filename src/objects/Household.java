@@ -24,7 +24,7 @@ public class Household implements Serializable {
 	private int numAutoTrips;
 	private int ifAvHh;
 	
-	public Household( int hhid, int[] persTypes,int[] usualCarIds, List<Trip> trips, Map<Integer, int[][]> jointParties, int numAutos, List<AutoTrip> autoTrips, int homeMaz, int numAutoTrips, int ifAvHh) {
+	public Household( int hhid, int[] persTypes,int[][] usualCarIds, List<Trip> trips, Map<Integer, int[][]> jointParties, int numAutos, List<AutoTrip> autoTrips, int homeMaz, int numAutoTrips, int ifAvHh) {
 		
 		id = hhid;
 		hhsize = persTypes.length - 1;
