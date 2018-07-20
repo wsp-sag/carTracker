@@ -92,7 +92,8 @@ public class AbmDataStore {
 			propertyMap.get( AbmObjectTranslater.TRIP_ID_FIELD_KEY ),
 			propertyMap.get( AbmObjectTranslater.TRIP_ORIG_PURP_FIELD_KEY ),
 			 propertyMap.get( AbmObjectTranslater.TRIP_DEST_PURP_FIELD_KEY  ),
-			 propertyMap.get(AbmObjectTranslater.TRIP_ACTIVITY_DURATION_KEY)
+			 propertyMap.get(AbmObjectTranslater.TRIP_ACTIVITY_DURATION_KEY),
+			  propertyMap.get(AbmObjectTranslater.TRIP_VOT_FIELD_KEY)
 		);
 		 
 		hhRecords = new HashMap<Integer, List<List<String>>>();

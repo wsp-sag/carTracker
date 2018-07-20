@@ -77,7 +77,7 @@ public class HhObjectMapper implements HhObjectMapperIf {
     	int[][] linkedToIds = abmData.getLinkedToIds();
     	int[][] jointDriverPnums = abmData.getJointDriverPnums();
     	
-    	float[][] valueOfTime = null;
+    	float[][] valueOfTime = abmData.getValueOfTime();
     	float[][] tripDistance = abmData.getDistances();
     	float[][] actvityDurations = abmData.getDurations();
     	int[] numCompletedTrips = new int[ numHhMembers+1 ];
@@ -97,8 +97,8 @@ public class HhObjectMapper implements HhObjectMapperIf {
     	int[] autoTripDestTaz = null;
     	int[] autoTripPersonTripId = null;
     	float[] autoTripDistance = null;
-	
-	
+    	int[] autoTripModes = null;
+    	float[] autoVot = null;
     	if(abmData.getNumberOfAutoTrips()>0){
 	    	autoTripPnum = abmData.getAutoTripsPnums();
 	    	autoOrigPurp = abmData.getAutoTripsOrigActs();
@@ -109,13 +109,15 @@ public class HhObjectMapper implements HhObjectMapperIf {
 	    	autoTripDestTaz = abmData.getAutoTripsDestTaz();
 	    	autoTripPersonTripId = abmData.getAutoTripsPersonTripId();
 	    	autoTripDistance = abmData.getAutoTripsDistance();
+	    	autoTripModes = abmData.getAutoTripsMode();
+	    	autoVot = abmData.getAutoValueOfTime();
     	}
     	
     	Household hh = HouseholdFactory.getInstance().createHousehold(propertyMap, hhid, uniqueChronologicalIds, numHhMembers, personTypes, usualCarIds,numTrips, numHhJointTrips, numParticipants, participants,
         		numJointTrips, jointTrips, orgActivityType, destActivityType, origMazs, destMazs, tripModes, numCompletedTrips, tripPlannedDeparture, tripPlannedTime, tripPlannedTime,
         		tripDistance, valueOfTime, tripRecNums, assignedTripModes, tripVehIds, linkedToIds, jointDriverPnums, minActDurMap, numAutos,
         		tripHhAutoTripId,autoTripPnum,autoOrigPurp,autoDestPurp,autoTripDepart,autoTripTravelTime,autoTripOrigTaz,autoTripDestTaz,
-        		autoTripPersonTripId,autoTripDistance, homeMaz,abmData.getNumberOfAutoTrips(),ifAvHh, actvityDurations);
+        		autoTripPersonTripId,autoTripDistance, homeMaz,abmData.getNumberOfAutoTrips(),ifAvHh, actvityDurations,autoTripModes,autoVot);
         	
     	hh.setNumIndivTripRecords( abmData.getNumTripRecords() );
     	hh.setNumJointTripRecords( numHhJointTrips );

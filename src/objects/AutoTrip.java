@@ -17,11 +17,13 @@ public class AutoTrip implements Serializable {
 	private final float schedTime;
 	private final float distance;
 	private final double minActivityDuartion;
+	private final int mode;
+	private final float vot;
 	
 	
 	public AutoTrip( int id, int pnum, int indivId, int origAct, int destAct,
 			int origMaz, int destMaz, float depTime,  float plannedTravelTime, 
-			float distance, double minActivityDuartion ) {
+			float distance, double minActivityDuartion, float vot, int mode ) {
 		this.id = id;
 		this.pnum = pnum;
 		this.hhTripId = indivId;
@@ -33,6 +35,8 @@ public class AutoTrip implements Serializable {
 		this.schedTime = plannedTravelTime;
 		this.distance = distance;
 		this.minActivityDuartion = minActivityDuartion;
+		this.vot = vot;
+		this.mode = mode;
 	}
 
 
@@ -84,6 +88,11 @@ public class AutoTrip implements Serializable {
 	public int getHhTripId(){
 		return hhTripId;
 	}
-
+	public int getMode(){
+		return mode;
+	}
 	
+	public float getValueOfTime(){
+		return vot;
+	}
 }

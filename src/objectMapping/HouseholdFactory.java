@@ -40,7 +40,7 @@ public class HouseholdFactory {
 			float[][] tripPlannedDeparture, float[][] tripPlannedTime, float[][] tripExpectedTime, float[][] tripDistance, float[][] valueOfTime, int[][] tripRecNums, int[][] assignedTripModes,
 			int[][] tripVehIds, int[][] linkedToIds, int[][] jointDriverPnums, Map<Long, Double> minActDurMap, int numAutos, int[][]tripHhAutoTripId , int[] autoTripPnum,
 			int[] autoOrigPurp,int[] autoDestPurp,float[] autoTripDepart,float[] autoTripTravelTime,
-			int[] autoTripOrigTaz,int[] autoTripDestTaz,int[] autoTripPersonTripId,float[] autoTripDistance, int homeMaz, int numAutoTrips, int ifAvHh, float[][] actvityDurations) {
+			int[] autoTripOrigTaz,int[] autoTripDestTaz,int[] autoTripPersonTripId,float[] autoTripDistance, int homeMaz, int numAutoTrips, int ifAvHh, float[][] actvityDurations, int[] autoModes, float[] autoVot) {
 
 		Map<Integer, int[][]> jointParties = new HashMap<Integer, int[][]>();
 		int[][] uniqueTripIds = createUniqueTripIds( numHhMembers, numTrips );		
@@ -67,7 +67,7 @@ public class HouseholdFactory {
 				Trip trip = new Trip(  uniqueTripIds[m][i], m, uniqueChronologicalIds[m][i], i, jointTrips[m] == null ? 0 : jointTrips[m][i], orgActivityType[m][i], 
 						destActivityType[m][i], origMazs[m][i], destMazs[m][i], tripModes[m][i], linkedTripIds, tripPlannedDeparture[m][i], 
 						tripPlannedDeparture[m][i] + tripPlannedTime[m][i], tripPlannedTime[m][i], tripExpectedTime[m][i], tripDistance[m][i], 
-						10, tripRecNums[m][i], assignedTripModes[m][i], tripVehIds[m][i], linkedToIds[m][i], jointDriverPnums[m][i], minActDur );
+						valueOfTime[m][i], tripRecNums[m][i], assignedTripModes[m][i], tripVehIds[m][i], linkedToIds[m][i], jointDriverPnums[m][i], minActDur  );
 				trip.setHhAutoTripId(tripHhAutoTripId[m][i]);
 				tripList.add( trip );
 				
@@ -76,9 +76,12 @@ public class HouseholdFactory {
 		}
 		
 		if(numAutoTrips>0){
+			
 			for ( int i=1; i < autoTripPnum.length; i++ ) {
+				double minActDur = Float.parseFloat(propertyMap.get("min.activity.duration"));
+				
 				AutoTrip aTrip = new AutoTrip(i,autoTripPnum[i],autoTripPersonTripId[i],autoOrigPurp [i],autoDestPurp [i],autoTripOrigTaz [i],
-						autoTripDestTaz [i],autoTripDepart [i],autoTripTravelTime [i],autoTripDistance[i],5d);
+						autoTripDestTaz [i],autoTripDepart [i],autoTripTravelTime [i],autoTripDistance[i],minActDur,autoVot[i], autoModes[i]);
 				autoTripList.add(aTrip);
 			}
 		}

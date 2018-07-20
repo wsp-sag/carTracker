@@ -83,7 +83,7 @@ public class CarAllocation
 
     
     //public static final int M_BIG_CONSTANT = Integer.MAX_VALUE;
-    public static final long M_BIG_CONSTANT = (long) (Math.pow(2, 25)-1);
+    public static final long M_BIG_CONSTANT = (long) (Math.pow(2, 20)-1);
     public static final long NON_AV_REPO_COST = (long) (Math.pow(2, 15)-1);
     
     
@@ -181,8 +181,7 @@ public class CarAllocation
 	boolean reportFinalSolution = false;
     static {
     	
-    	
-        System.loadLibrary("jniortools");
+    	System.loadLibrary("jniortools");
         
     }
 
@@ -211,7 +210,7 @@ public class CarAllocation
     }
 
     
-    public MPSolver setupLp( Household hh, int endOfSimulationMinute,int[][] xijIntergerization, int[][] xijFixFlag,int[][][] sikjIntergerization, int[][][] sikjFixFlag,int[][][] gikjIntergerization, int[][][] gikjFixFlag, String solverType ) {
+    public MPSolver setupLp( Household hh, int endOfSimulationMinute,int[][] xijIntergerization, int[][] xijFixFlag,int[][][] sikjIntergerization, int[][][] sikjFixFlag,int[][][] gikjIntergerization, int[][][] gikjFixFlag, String solverType, int iterNumForIntegerizing ) {
     	
         MPSolver solver = null;
         try {
@@ -230,7 +229,7 @@ public class CarAllocation
     	setupContraints( hh, solver, endOfSimulationMinute );
     	reportFinalSolution = false;
     	if(logHhId == hh.getId()){
-    		reportInitialLp( solver );
+    		reportInitialLp( solver, iterNumForIntegerizing );
     		reportFinalSolution= true;
     	}
     	
@@ -278,7 +277,7 @@ public class CarAllocation
     		
     		for ( int j=0; j < numAutos; j++ )     {   	
     			ofVarsJ[INDEX_UnusedCar ][j] = solver.makeNumVar( 0.0, 1, ( name = "CarUnused_"+j ) );
-                objective.setCoefficient( ofVarsJ[INDEX_UnusedCar][j], -unusedCarBonus); 
+                objective.setCoefficient( ofVarsJ[INDEX_UnusedCar][j], unusedCarBonus); 
                 ofCoeffList.add(unusedCarBonus );
         		variableNameList.add( name ); 
     			
@@ -329,6 +328,7 @@ public class CarAllocation
         		for ( int j=0; j < numAutos; j++ )     {   		
         			int usualDrDummy = usualCarsForPerson[j];
         			
+        			float diffPnumAuto = Math.abs(j-aTrip.getPnum());
         			// F6
         			float lowerBound = 0;
         			float uppperBound = 1;
@@ -340,8 +340,8 @@ public class CarAllocation
         				}
         			}
         			ofVarsIJ[INDEX_CarAllo ][i][j] = solver.makeIntVar( lowerBound, uppperBound, ( name = "CarAlloc_"+i+"_"+j ) );
-                    objective.setCoefficient( ofVarsIJ[INDEX_CarAllo][i][j], -usualDrBonus*usualDrDummy); //j is added for singularity
-                    ofCoeffList.add( -usualDrBonus*usualDrDummy );
+                    objective.setCoefficient( ofVarsIJ[INDEX_CarAllo][i][j], -usualDrBonus*usualDrDummy+(-0.0001*diffPnumAuto)); //j is added for singularity
+                    ofCoeffList.add( (float) (-usualDrBonus*usualDrDummy +(-0.0001*diffPnumAuto)));
             		variableNameList.add( name );     
             		//ofVarsIJ[INDEX_CarAllo ][i][j].setInteger(true);
             		//F2
@@ -425,20 +425,20 @@ public class CarAllocation
 	        		// calculate parking cost at destination (for Sik)
 	        		if(ad == PurposeCategories.WORK.getIndex() ||ad == PurposeCategories.BUSINESS.getIndex() || ad == PurposeCategories.SCHOOL.getIndex() ||
 	        				ad == PurposeCategories.UNIVERSITY.getIndex())
-	        			parkCostSik = (parkingRateMonth[destMaz]/MONTHLY_PARKING_SCALE);
+	        			parkCostSik = (parkingRateMonth[destMaz]/MONTHLY_PARKING_SCALE)/100; // parking in cents
 	        		else
-	        			parkCostSik = parkingRateHr[destMaz]*(nextATrip.getSchedDepart()-aTrip.getSchedDepart()- 
+	        			parkCostSik = (parkingRateHr[destMaz]/100)*(nextATrip.getSchedDepart()-aTrip.getSchedDepart()- 
 	        					nextATrip.getSchedTime() - aTrip.getSchedTime())/60; // divided by 60 to convert minutes into hour
 	        		
 	        		// calculate parking cost at destination (for Gik)
 	        		if(nextAo == PurposeCategories.WORK.getIndex() ||nextAo == PurposeCategories.BUSINESS.getIndex() || nextAo == PurposeCategories.SCHOOL.getIndex() ||
 	        				nextAo == PurposeCategories.UNIVERSITY.getIndex())
-	        			parkCostGik = (parkingRateMonth[origMazNextTrip]/MONTHLY_PARKING_SCALE);
+	        			parkCostGik = (parkingRateMonth[origMazNextTrip]/MONTHLY_PARKING_SCALE)/100; // parking in cents
 	        		else
-	        			parkCostGik = parkingRateHr[origMazNextTrip]*(nextATrip.getSchedDepart()-aTrip.getSchedDepart()- 
+	        			parkCostGik = (parkingRateHr[origMazNextTrip]/100)*(nextATrip.getSchedDepart()-aTrip.getSchedDepart()- 
 	        					nextATrip.getSchedTime() - aTrip.getSchedTime())/60;
 	        		
-	        		// no parking cost for zero
+	        		// no parking cost for going home
 	        		if(ad == 0){
 	        			parkCostSik = 0;
 	        		
@@ -876,7 +876,7 @@ public class CarAllocation
     }
     
 
-    public boolean solveLp( MPSolver solver ) {
+    public boolean solveLp( MPSolver solver, int integerizingIterationNum ) {
         
         //solver.setTimeLimit( CPU_TIME_LIMIT );
         MPSolver.ResultStatus resultStatus = solver.solve();
@@ -887,14 +887,14 @@ public class CarAllocation
           return false;
         }
         if(reportFinalSolution)
-        	reportFinalLpSolution(solver);
+        	reportFinalLpSolution(solver,integerizingIterationNum);
         
         return true;
 
     }
 
 
-    public void reportInitialLp( MPSolver solver ) {
+    public void reportInitialLp( MPSolver solver,int iterNumForIntegerizing ) {
         
     	logger.info( "LP problem has " + solver.numVariables() + " variables and " + solver.numConstraints() +" constraints." ); 
 
@@ -919,7 +919,7 @@ public class CarAllocation
         	
     	}
     	
-    	Util.writeArrayDataToCsv( "./coeffsArray.csv", "constraint", constraintNameList, variableNameList, coeffsArray );
+    	Util.writeArrayDataToCsv( "./coeffsArray"+String.valueOf(iterNumForIntegerizing)+".csv", "constraint", constraintNameList, variableNameList, coeffsArray );
 
     	
     	
@@ -945,7 +945,7 @@ public class CarAllocation
 
     
     
-    public void reportFinalLpSolution( MPSolver solver ) {
+    public void reportFinalLpSolution( MPSolver solver, int integerizingIterationNum ) {
         
     	double[][] resultsArray = new double[2][variableNameList.size()];
 
@@ -963,7 +963,7 @@ public class CarAllocation
        		i++;
     	}
     	
-    	Util.writeArrayDataToCsv( "./resultsArray.csv", "solution", rowNames, variableNameList, resultsArray );
+    	Util.writeArrayDataToCsv( "./resultsArray"+String.valueOf(integerizingIterationNum)+".csv", "solution", rowNames, variableNameList, resultsArray );
         
     	
     }
@@ -988,6 +988,7 @@ public class CarAllocation
 		purposeMap.put( WORK_INDEX, WORK );
 		purposeMap.put( UNIV_INDEX, UNIV );
 		purposeMap.put( SCHOOL_INDEX, SCHOOL );
+		purposeMap.put( ESCORT, ESCORT );
 		purposeMap.put( ESCORT_INDEX, ESCORT );
 		purposeMap.put( PURE_ESCORT_INDEX, ESCORT );
 		purposeMap.put( RIDE_SHARING_INDEX, ESCORT );

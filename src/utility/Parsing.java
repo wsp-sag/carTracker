@@ -238,6 +238,32 @@ public class Parsing implements Serializable {
 		return result;
     }
     
+public static String[] getStringArrayFromCsvString( String csvString ) {
+    	
+    	String[] results = null;
+    	
+        List<String> resultList = new ArrayList<String>(); 
+        
+        String delimSet = ",";
+        StringTokenizer st = new StringTokenizer( csvString, delimSet );
+        
+        int k = 0;
+        int columnIndex = -1;
+        while ( st.hasMoreTokens() ) {
+        	String value = st.nextToken().trim();
+        	resultList.add( value );
+        }
+
+        
+    	results = new String[resultList.size()];
+    	for ( int i=0; i < results.length; i++ )
+    		results[i] = resultList.get( i );
+	        	
+    	return results;
+    	
+    }
+    
+
 }
     
 

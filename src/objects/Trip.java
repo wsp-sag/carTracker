@@ -31,8 +31,8 @@ public class Trip implements Serializable {
 	private final double minActivityDuartion;
 	private int hhAutoTripId;
 	
-	
-	public Trip( int id, int pnum, int uniqueId, int indivId, int jointId, int origAct, int destAct, int origMaz, int destMaz, int mode, int[] linkedTripIds, float depTime, float arrTime, float plannedTravelTime, float simulatedTravelTime, float distance, float vot, int tripRecNum, int assignedMode, int tripVehId, int linkedToId, int jointDriverPnum, double minActivityDuartion ) {
+	public Trip( int id, int pnum, int uniqueId, int indivId, int jointId, int origAct, int destAct, int origMaz, int destMaz, int mode, int[] linkedTripIds, float depTime, float arrTime, float plannedTravelTime, float simulatedTravelTime, float distance, float vot, int tripRecNum, 
+			int assignedMode, int tripVehId, int linkedToId, int jointDriverPnum, double minActivityDuartion ) {
 		this.id = id;
 		this.pnum = pnum;
 		this.uniqueTripId = uniqueId;
@@ -163,5 +163,5 @@ public class Trip implements Serializable {
 	public void setAllocatedAutoId(int autoId){
 		tripVehId = autoId;
 	}
-	
+
 }

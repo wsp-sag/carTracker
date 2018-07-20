@@ -67,8 +67,8 @@ public class HhCarAllocator implements HhCarAllocatorIf, Serializable {
             int[][][] sikjFixFlag = null;
             int[][][] gikjIntergerization = null;
             int[][][] gikjFixFlag = null;
-            solver = allocator.setupLp( hh, MAX_SIMULATION_TIME[iterNum] ,xijIntergerization,xijFixFlag,sikjIntergerization,sikjFixFlag,gikjIntergerization,gikjFixFlag,solverType);
-            optimalSolutionFound = allocator.solveLp( solver );
+            solver = allocator.setupLp( hh, MAX_SIMULATION_TIME[iterNum] ,xijIntergerization,xijFixFlag,sikjIntergerization,sikjFixFlag,gikjIntergerization,gikjFixFlag,solverType,iterNumForIntegerizing);
+            optimalSolutionFound = allocator.solveLp( solver,iterNumForIntegerizing );
             iterNumForIntegerizing++;
             int numAllocParamters = hh.getAutoTrips().size()*hh.getNumAutos();
             // set solver type to linear if mixed integer was selected and LP failed
@@ -118,8 +118,8 @@ public class HhCarAllocator implements HhCarAllocatorIf, Serializable {
             		break;
             	
             	//Run solver with bulk integerizing
-            	solver = allocator.setupLp( hh, MAX_SIMULATION_TIME[iterNum] ,xijIntergerization,xijFixFlag,sikjIntergerization,sikjFixFlag,gikjIntergerization,gikjFixFlag,solverType);
-            	optimalSolutionBulkIntegerizedFound = allocator.solveLp( solver );
+            	solver = allocator.setupLp( hh, MAX_SIMULATION_TIME[iterNum] ,xijIntergerization,xijFixFlag,sikjIntergerization,sikjFixFlag,gikjIntergerization,gikjFixFlag,solverType,iterNumForIntegerizing);
+            	optimalSolutionBulkIntegerizedFound = allocator.solveLp( solver,iterNumForIntegerizing );
             	
                	if(!optimalSolutionBulkIntegerizedFound)
             		logger.info("LP failed for after 1st bulk integerizing for hh = "+ hh.getId());
@@ -177,8 +177,8 @@ public class HhCarAllocator implements HhCarAllocatorIf, Serializable {
             	if(allXijIntegers)
             		break;
             	
-            	solver = allocator.setupLp( hh, MAX_SIMULATION_TIME[iterNum] ,xijIntergerization,xijFixFlag,sikjIntergerization,sikjFixFlag,gikjIntergerization,gikjFixFlag,solverType);
-            	optimalSolution2ndBulkIntegerizedFound = allocator.solveLp( solver );
+            	solver = allocator.setupLp( hh, MAX_SIMULATION_TIME[iterNum] ,xijIntergerization,xijFixFlag,sikjIntergerization,sikjFixFlag,gikjIntergerization,gikjFixFlag,solverType,iterNumForIntegerizing);
+            	optimalSolution2ndBulkIntegerizedFound = allocator.solveLp( solver,iterNumForIntegerizing );
           
             	
             	if(!optimalSolution2ndBulkIntegerizedFound)
@@ -308,8 +308,8 @@ public class HhCarAllocator implements HhCarAllocatorIf, Serializable {
 
 	            		
             		}
-            		solver = allocator.setupLp( hh, MAX_SIMULATION_TIME[iterNum] ,xijIntergerization,xijFixFlag,sikjIntergerization,sikjFixFlag,gikjIntergerization,gikjFixFlag,solverType);
-                	optimalSolutionIntegerizedFound = allocator.solveLp( solver );
+            		solver = allocator.setupLp( hh, MAX_SIMULATION_TIME[iterNum] ,xijIntergerization,xijFixFlag,sikjIntergerization,sikjFixFlag,gikjIntergerization,gikjFixFlag,solverType,iterNumForIntegerizing);
+                	optimalSolutionIntegerizedFound = allocator.solveLp( solver,iterNumForIntegerizing );
                 	iterNumForIntegerizing++;
                 	
                 	if(!optimalSolutionIntegerizedFound){
@@ -318,8 +318,8 @@ public class HhCarAllocator implements HhCarAllocatorIf, Serializable {
         				sikjIntergerization[maxJS][maxIS][maxKS] = 0;
         				gikjFixFlag[maxJG][maxIG][maxKG] = 1;
         				gikjIntergerization[maxJG][maxIG][maxKG] = 0;
-        				solver = allocator.setupLp( hh, MAX_SIMULATION_TIME[iterNum] ,xijIntergerization,xijFixFlag,sikjIntergerization,sikjFixFlag,gikjIntergerization,gikjFixFlag,solverType);
-                    	optimalSolutionIntegerizedFound = allocator.solveLp( solver );
+        				solver = allocator.setupLp( hh, MAX_SIMULATION_TIME[iterNum] ,xijIntergerization,xijFixFlag,sikjIntergerization,sikjFixFlag,gikjIntergerization,gikjFixFlag,solverType,iterNumForIntegerizing);
+                    	optimalSolutionIntegerizedFound = allocator.solveLp( solver,iterNumForIntegerizing );
                 	}
                 	
                 	if(optimalSolutionIntegerizedFound){

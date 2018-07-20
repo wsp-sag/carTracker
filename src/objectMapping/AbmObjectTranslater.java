@@ -83,6 +83,7 @@ public class AbmObjectTranslater {
 	public static final String TRIP_ARRIVE_MINUTE_FIELD_KEY = "trip.arrive.minute.field";
 	public static final String TRIP_PLANNED_DISTANCE_FIELD_KEY = "trip.planned.distance.field";
 	public static final String TRIP_MODE_FIELD_KEY = "trip.mode.field";
+	public static final String TRIP_VOT_FIELD_KEY = "trip.vot.field";
 	public static final String TRIP_ACTIVITY_DURATION_KEY = "abm.data.file.final.activity.duration";
 	public static final String NUM_AUTOS_FIELD_KEY = "hh.num.auto.field";
 	
@@ -108,6 +109,7 @@ public class AbmObjectTranslater {
 	private String tripArriveMinuteField;
 	private String tripPlannedDistanceField;
 	private String tripModeField;
+	private String tripUserClassField;
 	private String tripVotField;
 	private String minActDurationField;
 	private String actDurationField;
@@ -165,6 +167,7 @@ public class AbmObjectTranslater {
 		homeMazField = propertyMap.get(HH_MAZ_KEY);
 		ifAvHhField= propertyMap.get(HH_AV_FLAG_KEY);
 		usualCarIdField = propertyMap.get(PERSON_USUAL_CAR_ID_FIELD_KEY);
+		tripVotField = propertyMap.get(TRIP_VOT_FIELD_KEY);
 		autoTripInfo = new ArrayList<Object>();
 		if ( numTripRecords > 0 ) {
 			
@@ -249,6 +252,7 @@ public class AbmObjectTranslater {
 		int[] tripVehIds = new int[ tripRecords.size()+1 ];
 		int[] assignedTripMode = new int[ tripRecords.size()+1 ];
 		float[] distance = new float[ tripRecords.size()+1 ];
+		float[] vot = new float[ tripRecords.size()+1 ];
 		int[] linkedTripIds = new int[ tripRecords.size()+1 ];
 		int[] jointDriverPnum = new int[ tripRecords.size()+1 ];
 		double[] tripMinActDur = new double[ tripRecords.size()+1 ];
@@ -263,19 +267,7 @@ public class AbmObjectTranslater {
 			if(mode == SOV_MODE || mode == HOV2_DR_MODE || mode == HOV3_DR_MODE)
 				numAutoTrips++;
 		}
-		int[] autoTripId = new int[ numAutoTrips+1 ];
-		int[] autoTripPnums = new int[ numAutoTrips+1 ];
-		float[] autoTripDeparts = new float[ numAutoTrips+1 ];
-		int[] autoTripOrigTazs = new int[ numAutoTrips+1 ];
-		int[] autoTripDestTazs = new int[ numAutoTrips+1 ];
-		int[] autoTripsPersonTripId = new int[ numAutoTrips+1 ]; // person trip ID for the hh auto trip
-		int[][] autoTripParties = new int[ numAutoTrips+1 ][];
-		int[] autoTripOrigPurps = new int[ numAutoTrips+1 ];
-		int[] autoTripDestPurps = new int[ numAutoTrips+1 ];
-		float[] autoTripDistance = new float[ numAutoTrips+1 ];
-		float[] autoTripTravelTime = new float[ numAutoTrips+1 ];
-		
-		int tripNum = 1;
+			int tripNum = 1;
 		int pnum = 0;
 		int autoTripNum =1 ;
 		
@@ -324,6 +316,9 @@ public class AbmObjectTranslater {
 				String distValue = record.get( fieldIndexMap.get(tripPlannedDistanceField) );
 				distance[tripNum] = Float.parseFloat( distValue );
 
+				String votValue = record.get( fieldIndexMap.get(tripVotField) );
+				vot[tripNum] = Float.parseFloat( votValue );
+				
 				tripMinActDur[tripNum] = minDuration;
 				
 							
@@ -360,6 +355,10 @@ public class AbmObjectTranslater {
 				
 				float departMinute = depart + abmStartOfDayMinute;
 	
+
+			
+				
+				
 				if ( tripAdjDepMap != null ) {
 					if ( debugging ) {
 						departMinute = tripAdjDepMap.get( tripNum );
@@ -374,17 +373,6 @@ public class AbmObjectTranslater {
 				tripsHhAutoTripId[tripNum] = 0;
 				// get information of auto trips
 				if(mode == SOV_MODE || mode == HOV2_DR_MODE || mode == HOV3_DR_MODE){
-					autoTripId[autoTripNum] = autoTripNum;
-					autoTripPnums[autoTripNum] = pnum;
-					autoTripDeparts[autoTripNum] =  Float.parseFloat( departValue );
-					autoTripOrigTazs[autoTripNum] = omaz;
-					autoTripDestTazs[autoTripNum] = dmaz;
-					autoTripsPersonTripId[autoTripNum] = tripNum;
-					autoTripOrigPurps[autoTripNum] = oPurposeIndex;
-					autoTripDestPurps[autoTripNum] = dPurposeIndex;
-					autoTripParties[autoTripNum] = Parsing.getOneDimensionalIntArrayValuesFromExportString( party );
-					autoTripDistance[autoTripNum] =  Float.parseFloat( distValue );
-					autoTripTravelTime[autoTripNum]= arrive - depart;
 					tripsHhAutoTripId[tripNum]= autoTripNum;
 					autoTripNum++;
 				}
@@ -453,6 +441,7 @@ public class AbmObjectTranslater {
 		allTripsResultList.add( tripMinActDur );
 		allTripsResultList.add(tripsHhAutoTripId);
 		allTripsResultList.add(activityDuration);
+		allTripsResultList.add(vot);
 		return allTripsResultList;
 		
 	}	
@@ -477,25 +466,9 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 		List<List<String>> tripRecords = dataStore.getTripRecords( hhid );
 
 		
-		
-		int[] tripPnums = new int[ tripRecords.size()+1 ];
-		int[] tripOrigMazs = new int[ tripRecords.size()+1 ];
-		int[] tripDestMazs = new int[ tripRecords.size()+1 ];
-		int[] tripOrigPurps = new int[ tripRecords.size()+1 ];
-		int[] tripDestPurps = new int[ tripRecords.size()+1 ];
-		float[] tripDeparts = new float[ tripRecords.size()+1 ];
-		float[] indivPlannedTravelTimes = new float[ tripRecords.size()+1 ];
-		int[] tripModes = new int[ tripRecords.size()+1 ];
+
 		int[] uniqueTripIds = new int[ tripRecords.size()+1 ];
 		int[] jointTripIds = new int[ tripRecords.size()+1 ];
-		int[][] tripParties = new int[ tripRecords.size()+1 ][];
-		int[] tripRecNums = new int[ tripRecords.size()+1 ];
-		int[] tripVehIds = new int[ tripRecords.size()+1 ];
-		int[] assignedTripMode = new int[ tripRecords.size()+1 ];
-		float[] distance = new float[ tripRecords.size()+1 ];
-		int[] linkedTripIds = new int[ tripRecords.size()+1 ];
-		int[] jointDriverPnum = new int[ tripRecords.size()+1 ];
-		double[] tripMinActDur = new double[ tripRecords.size()+1 ];
 		int[] tripsHhAutoTripId = new int[ tripRecords.size()+1 ];
 		
 		// Calculate the number of auto trips in hh
@@ -517,6 +490,8 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 		int[] autoTripDestPurps = new int[ numAutoTrips+1 ];
 		float[] autoTripDistance = new float[ numAutoTrips+1 ];
 		float[] autoTripTravelTime = new float[ numAutoTrips+1 ];
+		float[] vot = new float[numAutoTrips+1];
+		int[] autoModes = new int[ numAutoTrips+1 ];
 		
 		int tripNum = 1;
 		int pnum = 0;
@@ -532,62 +507,36 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 				String id = record.get( fieldIndexMap.get(tripIdField) );
 				uniqueTripIds[tripNum] = Integer.parseInt( id );
 				
+				
 				String personNumValue = record.get( fieldIndexMap.get(tripPnumField) );
 				pnum = Integer.parseInt( personNumValue );
-				tripPnums[tripNum] = pnum;
 				
 				String modeValue = record.get( fieldIndexMap.get(tripModeField) );
 				int mode = Integer.parseInt( modeValue );
-				tripModes[tripNum] = mode;
-	
-			
 				String jtId = record.get( fieldIndexMap.get(jointTripIdField) );
 				jointTripIds[tripNum] = Integer.parseInt( jtId );
 				
-				jointDriverPnum[tripNum] = pnum;
+			
 				String party = "";
 				if ( jointTripIds[tripNum] > 0 ) {
-					party = record.get( fieldIndexMap.get(tripPartyField) );
-					tripParties[tripNum] = Parsing.getOneDimensionalIntArrayValuesFromExportString( party );
+					party = record.get( fieldIndexMap.get(tripPartyField) );					
 					
-					if ( linkedJointTrips.containsKey( jointTripIds[tripNum] ) ) {
-						linkedJointTrips.get( jointTripIds[tripNum] ).add( tripNum );
-					}
-					else {
-						Set<Integer> tempSet = new TreeSet<Integer>();
-						tempSet.add( tripNum );
-						linkedJointTrips.put( jointTripIds[tripNum], tempSet );
-					}
-					
-					if ( tripParties[tripNum][0] == pnum ) {
-						jointDriverTripId.put( jointTripIds[tripNum], tripNum );
-					}
-						
-					jointDriverPnum[tripNum] = tripParties[tripNum][0];
 				}
 	
 				String distValue = record.get( fieldIndexMap.get(tripPlannedDistanceField) );
-				distance[tripNum] = Float.parseFloat( distValue );
-
-				tripMinActDur[tripNum] = minDuration;
 				
 							
 				String omazValue = record.get( fieldIndexMap.get(tripOrigMazField) );
 				int omaz = Integer.parseInt( omazValue );
-				tripOrigMazs[tripNum] = omaz;
 				
 				String dmazValue = record.get( fieldIndexMap.get(tripDestMazField) );
 				int dmaz = Integer.parseInt( dmazValue );
-				tripDestMazs[tripNum] = dmaz;
 				
 				String purposeValue = record.get( fieldIndexMap.get(tripOrigPurpField) );
 				int oPurposeIndex = Integer.parseInt( purposeValue );
-				tripOrigPurps[tripNum] = oPurposeIndex;
 				
 				String dPurposeValue = record.get( fieldIndexMap.get(tripDestPurpField) );
 				int dPurposeIndex = Integer.parseInt( dPurposeValue );
-				tripDestPurps[tripNum] = dPurposeIndex;
-			
 
 				String departValue = record.get( fieldIndexMap.get(tripDepartMinuteField) );
 				float depart = Float.parseFloat( departValue );
@@ -595,11 +544,8 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 				String arriveValue = record.get( fieldIndexMap.get(tripArriveMinuteField) );
 				float arrive = Float.parseFloat( arriveValue );
 							
-				//MAG String timeValue = record.get( TRIP_PLANNED_TRAVEL_MINUTES_FIELD_INDEX );
-				//MAG indivPlannedTravelTimes[tripNum] = (int)( Float.parseFloat( timeValue ) );
-				//indivPlannedTravelTimes[tripNum] = distance[tripNum] * 2;	// multiply by 2 to convert distance to time at 30 mph
-				indivPlannedTravelTimes[tripNum] = arrive - depart;
-				
+				String votValue = record.get( fieldIndexMap.get(tripVotField) );
+				float votFloat = Float.parseFloat( votValue );
 				float departMinute = depart + abmStartOfDayMinute;
 	
 				if ( tripAdjDepMap != null ) {
@@ -612,7 +558,7 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 					}
 				}
 				
-				tripDeparts[tripNum] = departMinute;
+
 				tripsHhAutoTripId[tripNum] = 0;
 				
 							
@@ -630,6 +576,10 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 					autoTripDistance[autoTripNum] =  Float.parseFloat( distValue );
 					autoTripTravelTime[autoTripNum]= arrive - depart;
 					tripsHhAutoTripId[autoTripNum]= autoTripNum;
+					
+					vot[autoTripNum] = votFloat;
+					autoModes[autoTripNum] = mode;
+					
 					autoTripNum++;
 				}
 				tripNum++;
@@ -657,6 +607,8 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 		autoTripsResultList.add(autoTripId);
 		autoTripsResultList.add(autoTripDistance);
 		autoTripsResultList.add(autoTripTravelTime);
+		autoTripsResultList.add(vot);
+		autoTripsResultList.add(autoModes);
 		
 		return autoTripsResultList;
 		
@@ -709,6 +661,7 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 		double[] tripMinActDur = null;
 		int[] tripsHhAutoTripId = null;
 		float[] activityDuration = null;
+		float[] vot = null;
 		
 		if ( tripInfo.size() > 0 ) {
 			tripOrigPurps = (int[])tripInfo.get(0);
@@ -726,6 +679,7 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 			tripMinActDur = (double[])tripInfo.get(18);
 			tripsHhAutoTripId = (int[])tripInfo.get(19);
 			activityDuration = (float[])tripInfo.get(20);
+			vot = (float[])tripInfo.get(21);
 		}
 		
 
@@ -747,6 +701,9 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 		double[][] personTripMinActDur = new double[ personTrips.length ][];
 		int[][] personTripRecNums= new int[ personTrips.length ][];
 		int[][] personHhAutoTripId= new int[ personTrips.length ][];
+		float[][] personTripVot= new float[ personTrips.length ][];
+
+		
 		
 		int[] tripIds = (int[])tripInfo.get(6);
 		int[] tripPnums = (int[])tripInfo.get(4);
@@ -770,6 +727,7 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 			personTripRecNums[i] = new int[ personTrips[i]+1 ];
 			personHhAutoTripId[i] = new int[personTrips[i]+1];
 			personActivityDuration[i] = new float[personTrips[i]+1];
+			personTripVot[i] = new float[personTrips[i]+1];
 		}
 
 		for ( int i=1; i < tripIds.length; i++ ) {
@@ -791,6 +749,7 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 			personLinkedToIds[pnum][k] = linkedToIds[index];
 			personJointDriverPnum[pnum][k] = jointDriverPnum[index];
 			personTripMinActDur[pnum][k] = tripMinActDur[index];
+			personActivityDuration[pnum][k] = vot[index];
 			/*
 			if(chronologicalAutoTripIndices != null && tripsHhAutoTripId[index]> 0)
 				personHhAutoTripId[pnum][k] = chronologicalAutoTripIndices[tripsHhAutoTripId[index]-1]-1;
@@ -820,7 +779,8 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 		resultList.add( personJointDriverPnum ); //13
 		resultList.add( personTripMinActDur ); //14
 		resultList.add(personHhAutoTripId);//15
-		resultList.add(personActivityDuration);
+		resultList.add(personActivityDuration); // 16
+		resultList.add(personTripVot); //17
 		return resultList;
 		
 	}
@@ -837,7 +797,8 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 		float[] tripTravelTimes = null;
 		float[] tripDistances = null;
 		int[] autoTripsPersonTripId = null;
-		
+		int[] autoMode = null;
+		float[] vot = null;
 		
 		if ( autoTripInfo.size() > 0 ) {
 			tripPnums = (int[])autoTripInfo.get(0);
@@ -849,7 +810,8 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 			tripDestPurps = (int[])autoTripInfo.get(8);
 			tripDistances = (float[])autoTripInfo.get(10);
 			tripTravelTimes = (float[])autoTripInfo.get(11);
-			
+			vot = (float[])autoTripInfo.get(12);
+			autoMode = (int[])autoTripInfo.get(13);
 
 		}	
 
@@ -862,10 +824,13 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 		int[] hhTripDestMazs = new int[ hhAutoTrips+1];
 		int[] hhTripPersonTripId = new int[hhAutoTrips+1];
 		float[] hhTripDistances = new float[ hhAutoTrips+1];
-
+		float[] tripVot = new float[ hhAutoTrips+1];
+		int[] tripMode = new int[ hhAutoTrips+1];
+		
 
 		int[] autoTripIds = (int[])autoTripInfo.get(9);
 		int[] allTripIds = (int[])tripInfo.get(6);
+		
 		for ( int i=1; i < autoTripIds.length; i++ ) {
 			int index = chronologicalAutoTripIndices[ autoTripIds[i]-1 ];
 			hhTripPnum[i] = tripPnums[index];
@@ -876,6 +841,8 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 			hhTripOrigMazs[i] = tripOrigMazs[index];
 			hhTripDestMazs[i] = tripDestMazs[index];
 			int indexAuto = autoTripsPersonTripId[index];
+			tripVot[i] = vot[index];
+			tripMode[i] = autoMode[index];
 			//hhTripPersonTripId[i]=  chronologicalTripIndices[autoTripIds[i]-1]-1;
 			hhTripPersonTripId[i]=  indexAuto-1;
 			hhTripDistances[i] = tripDistances[index];
@@ -891,6 +858,8 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 		resultList.add( hhTripDestMazs );
 		resultList.add( hhTripPersonTripId );
 		resultList.add( hhTripDistances );
+		resultList.add(tripMode);
+		resultList.add(tripVot);
 		
 		return resultList;
 		
@@ -1174,7 +1143,10 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 		return (double[][])odArrayObjects.get(14);
 	}
 	
-
+	public float[][] getValueOfTime() {
+		return (float[][])odArrayObjects.get(17);
+	}
+	
 	
 	public int getNumTripRecords() {
 		return numTripRecords;
@@ -1192,6 +1164,8 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 	public float[][] getDurations() {
 		return (float[][])odArrayObjects.get(16);
 	}
+
+	
 	
 	
 	public int[] getAutoTripsPnums() {
@@ -1227,9 +1201,13 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 	public float[] getAutoTripsDistance() {
 		return (float[])odAutoArrayObjects.get(8);
 	}
+	public int[] getAutoTripsMode() {
+		return (int[])odAutoArrayObjects.get(9);
+	}
 	
-	
-	
+	public float[] getAutoValueOfTime() {
+		return (float[])odAutoArrayObjects.get(10);
+	}
 	
 	
 	
