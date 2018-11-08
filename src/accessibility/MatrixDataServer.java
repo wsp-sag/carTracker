@@ -231,6 +231,10 @@ public class MatrixDataServer implements MatrixDataServerIf {
       MatrixReader mr = MatrixReader.createReader( MatrixType.TRANSCAD, new File(fileName) );
       matrix = mr.readMatrix( tableName );
     }
+    else if ( matrixType.equalsIgnoreCase("csv") ) {
+        MatrixReader mr = MatrixReader.createReader( MatrixType.CSV, new File(fileName) );
+        matrix = mr.readMatrix( tableName );
+      }
     else {
       throw new RuntimeException( "unsupported matrix type: " + matrixType );
     }

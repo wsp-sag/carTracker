@@ -39,6 +39,7 @@ public class HhObjectMapper implements HhObjectMapperIf {
     	int numAutos = abmData.getNumAutos(hhid);
     	int homeMaz = abmData.getHomeMaz(hhid);
     	int ifAvHh= abmData.getIfAvHousehold(hhid);
+    	int hidAcrossSample = abmData.getHidAcrossSample(hhid);
     	int[] numTrips = abmData.getPersonTripCount( hhid );
     	
     	int[][] participants = abmData.getJointParticipants();
@@ -113,7 +114,7 @@ public class HhObjectMapper implements HhObjectMapperIf {
 	    	autoVot = abmData.getAutoValueOfTime();
     	}
     	
-    	Household hh = HouseholdFactory.getInstance().createHousehold(propertyMap, hhid, uniqueChronologicalIds, numHhMembers, personTypes, usualCarIds,numTrips, numHhJointTrips, numParticipants, participants,
+    	Household hh = HouseholdFactory.getInstance().createHousehold(propertyMap, hhid,hidAcrossSample, uniqueChronologicalIds, numHhMembers, personTypes, usualCarIds,numTrips, numHhJointTrips, numParticipants, participants,
         		numJointTrips, jointTrips, orgActivityType, destActivityType, origMazs, destMazs, tripModes, numCompletedTrips, tripPlannedDeparture, tripPlannedTime, tripPlannedTime,
         		tripDistance, valueOfTime, tripRecNums, assignedTripModes, tripVehIds, linkedToIds, jointDriverPnums, minActDurMap, numAutos,
         		tripHhAutoTripId,autoTripPnum,autoOrigPurp,autoDestPurp,autoTripDepart,autoTripTravelTime,autoTripOrigTaz,autoTripDestTaz,

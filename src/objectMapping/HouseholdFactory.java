@@ -35,7 +35,7 @@ public class HouseholdFactory {
 	}
 	
 	
-	public Household createHousehold( HashMap<String, String> propertyMap,int hhid, int[][] uniqueChronologicalIds, int numHhMembers, int[] personTypes, int[][] usualCarIds, int[] numTrips, int numHhJointTrips, int[] numParticipants, int[][] participants,
+	public Household createHousehold( HashMap<String, String> propertyMap,int hhid, int hidAcrossSample, int[][] uniqueChronologicalIds, int numHhMembers, int[] personTypes, int[][] usualCarIds, int[] numTrips, int numHhJointTrips, int[] numParticipants, int[][] participants,
 			int[] numJointTrips, int[][] jointTrips, int[][] orgActivityType, int[][] destActivityType, int[][] origMazs, int[][] destMazs, int[][] tripModes, int[] numCompletedTrips,
 			float[][] tripPlannedDeparture, float[][] tripPlannedTime, float[][] tripExpectedTime, float[][] tripDistance, float[][] valueOfTime, int[][] tripRecNums, int[][] assignedTripModes,
 			int[][] tripVehIds, int[][] linkedToIds, int[][] jointDriverPnums, Map<Long, Double> minActDurMap, int numAutos, int[][]tripHhAutoTripId , int[] autoTripPnum,
@@ -85,7 +85,7 @@ public class HouseholdFactory {
 				autoTripList.add(aTrip);
 			}
 		}
-		Household hh = new Household( hhid, personTypes,usualCarIds, tripList, jointParties, numAutos,autoTripList, homeMaz,numAutoTrips,ifAvHh );
+		Household hh = new Household( hhid, hidAcrossSample, personTypes,usualCarIds, tripList, jointParties, numAutos,autoTripList, homeMaz,numAutoTrips,ifAvHh );
 		
 		Person[] persons = hh.getPersons();
 		

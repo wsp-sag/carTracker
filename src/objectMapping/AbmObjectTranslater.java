@@ -66,6 +66,7 @@ public class AbmObjectTranslater {
 //	public static final int NUM_TRIP_RECORD_FIELDS = 49;
 	
 	public static final String HH_NUM_AUTO_FIELD_KEY = "hh.num.auto.field";
+	public static final String HH_ID_WO_SAMPLE_FIELD_KEY = "hh.id.across.sample.field";
 	public static final String HH_MAZ_KEY = "hh.maz.field";
 	public static final String HH_AV_FLAG_KEY="hh.av.flag.field";
 	public static final String PERSON_TYPE_FIELD_KEY = "person.type.field";
@@ -116,6 +117,7 @@ public class AbmObjectTranslater {
 	private String numAutosField;
 	private String homeMazField;
 	private String ifAvHhField;
+	private String hidAcrossSampleField;
 	private String usualCarIdField;
 	
 	private int[] personTrips;
@@ -166,6 +168,7 @@ public class AbmObjectTranslater {
 		actDurationField = propertyMap.get(TRIP_ACTIVITY_DURATION_KEY);
 		homeMazField = propertyMap.get(HH_MAZ_KEY);
 		ifAvHhField= propertyMap.get(HH_AV_FLAG_KEY);
+		hidAcrossSampleField = propertyMap.get(HH_ID_WO_SAMPLE_FIELD_KEY);
 		usualCarIdField = propertyMap.get(PERSON_USUAL_CAR_ID_FIELD_KEY);
 		tripVotField = propertyMap.get(TRIP_VOT_FIELD_KEY);
 		autoTripInfo = new ArrayList<Object>();
@@ -964,6 +967,24 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 		
 	}
 	
+	public int getHidAcrossSample( int hhid ) {
+		
+		// get a map of file field numbers to tripRecord field positions
+		Map<String,Integer> fieldIndexMap = dataStore.getHhFieldIndexMap();
+		int idAcrossSampleFieldIndex = fieldIndexMap.get(hidAcrossSampleField);
+				
+		List<List<String>> hhecords = dataStore.getHouseholdRecords(hhid);
+		int idAcrossSampleValue = 0;
+	
+		for ( List<String> record : hhecords ) {
+			String idValue = record.get( idAcrossSampleFieldIndex );
+			idAcrossSampleValue= Integer.parseInt( idValue );
+		}
+		
+		return idAcrossSampleValue;
+		
+	}
+
 	public int getNumberOfAutoTrips(){
 		return numAutoTrips;
 	}
