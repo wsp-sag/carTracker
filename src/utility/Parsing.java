@@ -1,5 +1,10 @@
 package utility;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -262,6 +267,146 @@ public static String[] getStringArrayFromCsvString( String csvString ) {
     	return results;
     	
     }
+public static int[] getIntArrayFromCsvFile( String filename, String fieldName ) {
+	
+	int[] results = null;
+	
+	try {
+		
+        // open the input stream
+        String delimSet = ",";
+        BufferedReader inStream = null;
+        try {
+            inStream = new BufferedReader(new FileReader(new File(filename)));
+        }
+        catch (FileNotFoundException e) {
+            e.printStackTrace();
+            System.exit(-1);
+        }
+
+        
+        
+        List<Integer> resultList = new ArrayList<Integer>(); 
+
+        
+        // read the header record and get the column index that matches the fieldName passed in
+        String line = inStream.readLine();
+        StringTokenizer st = new StringTokenizer( line, delimSet );
+        
+        int k = 0;
+        int columnIndex = -1;
+        while ( st.hasMoreTokens() ) {
+        	String name = st.nextToken().trim();
+    		if ( fieldName.equalsIgnoreCase( name ) ) {
+    			columnIndex = k;
+    			break;
+    		}
+        	k++;
+        }
+
+        
+        // read the data records and extract the value for the determined column index
+        while ( ( line = inStream.readLine() ) != null ) {
+
+            st = new StringTokenizer( line, delimSet );
+            
+        	int value = -1;
+        	for ( int i=0; i <= columnIndex; i++ )
+                value = Integer.parseInt(st.nextToken());
+        	resultList.add( value );
+
+        }
+            
+
+    	results = new int[resultList.size()];
+    	for ( int i=0; i < results.length; i++ )
+    		results[i] = resultList.get( i );
+        	
+        
+	} catch (NumberFormatException e) {
+    	e.printStackTrace();
+    	System.exit(-1);
+    } catch (IOException e) {
+    	e.printStackTrace();
+    	System.exit(-1);
+    }
+	
+	
+	return results;
+	
+}
+
+
+public static double[] getDoubleArrayFromCsvFile( String filename, String fieldName ) {
+	
+	double[] results = null;
+	
+	try {
+		
+        // open the input stream
+        String delimSet = ",";
+        BufferedReader inStream = null;
+        try {
+            inStream = new BufferedReader(new FileReader(new File(filename)));
+        }
+        catch (FileNotFoundException e) {
+            e.printStackTrace();
+            System.exit(-1);
+        }
+
+        
+        
+        List<Double> resultList = new ArrayList<Double>(); 
+
+        
+        // read the header record and get the column index that matches the fieldName passed in
+        String line = inStream.readLine();
+        StringTokenizer st = new StringTokenizer( line, delimSet );
+        
+        int k = 0;
+        int columnIndex = -1;
+        while ( st.hasMoreTokens() ) {
+        	String name = st.nextToken().trim();
+    		if ( fieldName.equalsIgnoreCase( name ) ) {
+    			columnIndex = k;
+    			break;
+    		}
+        	k++;
+        }
+
+        
+        // read the data records and extract the value for the determined column index
+        while ( ( line = inStream.readLine() ) != null ) {
+
+            st = new StringTokenizer( line, delimSet );
+            
+        	double value = -1;
+        	for ( int i=0; i <= columnIndex; i++ )
+                value = Double.parseDouble(st.nextToken());
+        	
+        	resultList.add( value );
+
+        }
+            
+
+    	results = new double[resultList.size()];
+    	for ( int i=0; i < results.length; i++ )
+    		results[i] = resultList.get( i );
+        	
+        
+	} catch (NumberFormatException e) {
+    	e.printStackTrace();
+    	System.exit(-1);
+    } catch (IOException e) {
+    	e.printStackTrace();
+    	System.exit(-1);
+    }
+	
+	
+	return results;
+	
+}
+
     
 
 }

@@ -50,12 +50,14 @@ import algorithms.CarAllocation;
 import algorithms.CarAllocationTask;
 import algorithms.HhCarAllocator;
 import utility.CommonProcedures;
+import utility.Parsing;
 
 import com.pb.common.calculator.MatrixDataManager;
 import com.pb.common.matrix.Matrix;
 import com.pb.common.matrix.MatrixType;
 import com.pb.common.util.IndexSort;
 import com.pb.common.util.ResourceUtil;
+
 
 
 
@@ -354,6 +356,12 @@ public class CarAllocatorMain {
 		
 		String[] periodLabels = new String[]{ "early", "am", "midday", "pm", "late" };		
 		
+		float globalLoop = Float.parseFloat(propertyMap.get("global.loop"));
+		
+        double[] probChagingCarOwnership = null;
+        if(globalLoop > 1)
+        	probChagingCarOwnership = getProbabilityOfChangingCarOwnership( propertyMap.get("hh.car.ownership.correction.file"),propertyMap.get("hh.id.field"),propertyMap.get("hh.prob.car.change.field")  );
+    
 		
         PrintWriter outStreamTrip = null;
         PrintWriter outStreamCar = null;
@@ -366,7 +374,7 @@ public class CarAllocatorMain {
             String header2 = "hhid,carId,aVStatus,autoTripId,autoHhTripId,driverId,origPurp,destPurp,origMaz,destMaz,origTaz,destTaz,carRepositionType,origHome,destHome,tripDistance,distanceFromHomeToOrig,distanceFromHomeToDest,plannedDeparture,finalDeparture,finalArrival,departureEarly,departureLate,parkDurationAtDestination,ParkCostAtDestination,parkDurationAtNextOrigin,parkCostAtNextOrigin";
             outStreamCar.println( header2 );   
             outStreamHh = new PrintWriter( new BufferedWriter( new FileWriter( outputProbCarChangeFileName ) ) );
-            String header3 = "hhid,hidAcrossSample,probCarOwnershipChange";
+            String header3 = "hhid,hidAcrossSample,prevIterationCarChangeProb,probCarOwnershipChange,msaFactor";
             outStreamHh.println( header3 );   
         }
         catch (IOException e) {
@@ -403,6 +411,10 @@ public class CarAllocatorMain {
         int totalDemandMet = 0;
         double addCarFactor = Double.parseDouble(propertyMap.get("add.car.factor"));
         double subtractCarFactor = Double.parseDouble(propertyMap.get("subtract.car.factor"));
+        
+        
+        float msaFactor = 1/globalLoop;
+        
         for ( HouseholdCarAllocation depArrObj : hhCarAllocationResultsList ) {
             
             Household hh = depArrObj.getHousehold();
@@ -492,6 +504,7 @@ public class CarAllocatorMain {
                 
                
             }
+            
             int ifAvHh = hh.getIfAvHousehold();
             totalCars+=numAuto;
             if(ifAvHh == 1){
@@ -504,8 +517,9 @@ public class CarAllocatorMain {
             int autoTripID = 1;
             int destHome = 0;
             int origHome = 0;
-            
-            
+            double prevCarChangeProb = 0;
+            if(globalLoop > 1  && hh.getHidAcrossSample() < probChagingCarOwnership.length)
+            	prevCarChangeProb = probChagingCarOwnership[hh.getHidAcrossSample()];
             for ( int i=0; i < aTrips.size(); i++ ) {
             	totalDemand++;
             	AutoTrip trip = aTrips.get(i);
@@ -955,8 +969,9 @@ public class CarAllocatorMain {
             if(hhNumUnsatisfiedDemand>0){
             	probCarChange = addCarFactor;
             }
+            double msaProb = prevCarChangeProb*(1-msaFactor) + probCarChange*msaFactor;
             
-            String outRecordHh = hh.getId()+","+hh.getHidAcrossSample()+","+probCarChange;
+            String outRecordHh = hh.getId()+","+hh.getHidAcrossSample()+","+prevCarChangeProb+","+msaProb+","+msaFactor;
             outStreamHh.println(outRecordHh);
                     
         }
@@ -1104,6 +1119,30 @@ public class CarAllocatorMain {
 		
 		return (nextPeriodIndex - 1);
 	}
+	
+	public double[] getProbabilityOfChangingCarOwnership(String probFileName,String hhidName,String probField) {    	
+    	
+    	int[] hidWoSampleValues = Parsing.getIntArrayFromCsvFile( probFileName, hhidName );
+    	double[] probChange = Parsing.getDoubleArrayFromCsvFile( probFileName, probField );
+    	
+    	int maxHidWoSample = 0;
+    	for ( int i=0; i < hidWoSampleValues.length; i++  ){
+    		if ( (int)hidWoSampleValues[i] > maxHidWoSample )
+    			maxHidWoSample = (int)hidWoSampleValues[i];
+    	}
+    	double[] hhProbChangeCarOwnership = new double[maxHidWoSample+1];
+    	
+    	for ( int i=0; i < hidWoSampleValues.length; i++ ) {
+    		int hid =(int)hidWoSampleValues[i];
+    		double prob = probChange[i];
+    		
+    		hhProbChangeCarOwnership[hid] = prob;
+    	}
+    		    	
+    	return hhProbChangeCarOwnership;
+    	
+  }
+	
 	
 	public static void main( String[] args ) {
 

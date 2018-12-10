@@ -318,7 +318,7 @@ public class CarAllocation
         		if(hh.getIfAvHousehold() == 0 ){
         			reposCostHD = NON_AV_REPO_COST;
         			reposCostOH = NON_AV_REPO_COST;
-
+        			repoCostForHh = NON_AV_REPO_COST;
         		}
 
 
