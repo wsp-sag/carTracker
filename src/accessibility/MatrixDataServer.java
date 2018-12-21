@@ -94,10 +94,10 @@ public class MatrixDataServer implements MatrixDataServerIf {
     try {
 
       MatrixInfo info = new MatrixInfo( fileName, matrixType, tableName );
-      System.out.println( "Matrix Identifier" +  matrixIdentifier );
+      System.out.println( "Matrix Identifier: " +  matrixIdentifier );
       if ( ! matrixRegistry.containsKey( matrixIdentifier ) ) {
         logger.info( "creating matrix registry entry for: " + matrixIdentifier );
-        System.out.println( "Matrix Identifier" +  matrixIdentifier );
+        System.out.println( "Matrix Identifier: " +  matrixIdentifier );
         matrixRegistry.put( matrixIdentifier, info );
         Matrix m = loadMatrix( info );
         cacheMatrix ( matrixIdentifier, m );
