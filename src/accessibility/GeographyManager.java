@@ -122,15 +122,15 @@ public class GeographyManager implements Serializable
 
 
 
-    public void setupGeographyManager( ResourceBundle rb ) {
+    public void setupGeographyManager( HashMap<String,String> propertyMap ) {
 
-    	String inputFilePath = rb.getString(POPULATION_DATA_FILE_PATH_KEY);
+    	String inputFilePath = propertyMap.get(POPULATION_DATA_FILE_PATH_KEY);
 
-    	String mazControlsTableName = rb.getString( GEOGRAPHY_DATABASE_TABLE_PROPERTY_KEY );
-    	String mazFieldName = rb.getString( GEOGRAPHY_DATABASE_MAZ_FIELD_NAME_PROPERTY_KEY );
-    	String tazFieldName = rb.getString( GEOGRAPHY_DATABASE_TAZ_FIELD_NAME_PROPERTY_KEY );
-    	String pumaFieldName = rb.getString( GEOGRAPHY_DATABASE_PUMA_FIELD_NAME_PROPERTY_KEY );
-    	String metaFieldName = rb.getString( GEOGRAPHY_DATABASE_META_FIELD_NAME_PROPERTY_KEY );
+    	String mazControlsTableName = propertyMap.get( GEOGRAPHY_DATABASE_TABLE_PROPERTY_KEY );
+    	String mazFieldName = propertyMap.get( GEOGRAPHY_DATABASE_MAZ_FIELD_NAME_PROPERTY_KEY );
+    	String tazFieldName = propertyMap.get( GEOGRAPHY_DATABASE_TAZ_FIELD_NAME_PROPERTY_KEY );
+    	String pumaFieldName = propertyMap.get( GEOGRAPHY_DATABASE_PUMA_FIELD_NAME_PROPERTY_KEY );
+    	String metaFieldName = propertyMap.get( GEOGRAPHY_DATABASE_META_FIELD_NAME_PROPERTY_KEY );
 
 
     		
@@ -142,11 +142,11 @@ public class GeographyManager implements Serializable
 								  mazFieldName );
 
 
-		ifExternalStationsIncluded = Boolean.valueOf(rb.getString("include.external.stations"));
+		ifExternalStationsIncluded = Boolean.valueOf(propertyMap.get("include.external.stations"));
 		if(ifExternalStationsIncluded)
     	{
-    		String externalSationFileName = rb.getString( GEOGRAPHY_MANAGER_EXTERNAL_STATION_FILE );
-        	String stationsFieldName = rb.getString( GEOGRAPHY_MANAGER_EXTERNAL_STATION_FIELD );
+    		String externalSationFileName = propertyMap.get( GEOGRAPHY_MANAGER_EXTERNAL_STATION_FILE );
+        	String stationsFieldName = propertyMap.get( GEOGRAPHY_MANAGER_EXTERNAL_STATION_FIELD );
         	createExternalStationList( externalSationFileName,
 					  stationsFieldName);
     	}

@@ -146,17 +146,17 @@ public class CarAllocatorMain {
 	float tripExpansionFactor = 1.0f;
 	private boolean ifExternalStationsIncluded = false;
 	
-    public Map<Long, double[]> runCarAllocator( ResourceBundle rb, Logger logger, GeographyManager geogManager, SocioEconomicDataManager socec ) {
+    public Map<Long, double[]> runCarAllocator( HashMap<String,String> propertyMap, Logger logger, GeographyManager geogManager, SocioEconomicDataManager socec ) {
         
     	if ( logger == null )
     		logger = Logger.getLogger( CarAllocatorMain.class );
 
-        HashMap<String, String> propertyMap = ResourceUtil.changeResourceBundleIntoHashMap(rb);
-        String parametersFile = rb.getString( GlobalProperties.PARAMETER_FILE_KEY.toString() );       
+
+        String parametersFile = propertyMap.get( GlobalProperties.PARAMETER_FILE_KEY.toString() );       
 
         int debugHhId = -1;
         try {
-            debugHhId = Integer.valueOf( rb.getString( GlobalProperties.HHID_LOG_REPORT_KEY.toString() ) );
+            debugHhId = Integer.valueOf( propertyMap.get( GlobalProperties.HHID_LOG_REPORT_KEY.toString() ) );
         }
         catch( MissingResourceException e ) {         
         }
@@ -1177,16 +1177,18 @@ public static void main( String[] args ) {
 		System.exit(-1);
 	}
 	
+	HashMap<String,String> propertyMap = ResourceUtil.changeResourceBundleIntoHashMap(rb);
+	
 	// set up geography manager
 	GeographyManager geogManager = GeographyManager.getInstance();
-    geogManager.setupGeographyManager(rb);
+    geogManager.setupGeographyManager(propertyMap);
     
     // set up socio economic data manager
     SocioEconomicDataManager socec = SocioEconomicDataManager.getInstance();
-    socec.loadDataFromCsvFile(rb.getString("socec.data.file.name"), rb.getString("socec.data.maz.field"));
+    socec.loadDataFromCsvFile(propertyMap.get("socec.data.file.name"), propertyMap.get("socec.data.maz.field"));
     
 
-	mainObj.runCarAllocator( rb, null, geogManager, socec );
+	mainObj.runCarAllocator( propertyMap, null, geogManager, socec );
 	
 	System.out.println ( "Car Tracker finished in " + (int)((System.currentTimeMillis() - start)/1000.0) + " seconds." );
     System.out.println ( "\n" );
