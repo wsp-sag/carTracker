@@ -8,9 +8,17 @@ import org.jppf.node.protocol.JobMetadata;
 
 public class CarTrackNodeListener implements NodeLifeCycleListener {
 
+	static {
+
+		//System.loadLibrary("jniortools");
+
+		}
+		 
+	
+	
 	@Override
 	public void nodeStarting(NodeLifeCycleEvent event) {
-    	System.loadLibrary("jniortools");
+    	//System.loadLibrary("jniortools");
 	}
 		
 	public void nodeEnding(NodeLifeCycleEvent event) {

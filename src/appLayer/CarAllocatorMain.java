@@ -205,7 +205,13 @@ public class CarAllocatorMain {
 		
 //        JPPFNodeForwardingMBean forwarder = null;
 //        NodeSelector masterSelector = null;
-        JPPFClient myClient =  new JPPFClient();        
+		
+		int minHhId = Integer.valueOf( propertyMap.get( GlobalProperties.MIN_ABM_HH_ID_KEY.toString() ) );
+		int maxHhId = Integer.valueOf( propertyMap.get( GlobalProperties.MAX_ABM_HH_ID_KEY.toString() ) );
+		
+		
+		
+          
 //        if ( ! myClient.isLocalExecutionEnabled() ) {
 //            
 //            try {
@@ -234,16 +240,29 @@ public class CarAllocatorMain {
 //        }
 	    
 
-		int minHhId = Integer.valueOf( propertyMap.get( GlobalProperties.MIN_ABM_HH_ID_KEY.toString() ) );
-		int maxHhId = Integer.valueOf( propertyMap.get( GlobalProperties.MAX_ABM_HH_ID_KEY.toString() ) );
+
         AbmDataStore abmDataStore = new AbmDataStore( propertyMap );
+
 		minHhId = minHhId >= 0 ? minHhId : abmDataStore.getMinHhId();
 		maxHhId = maxHhId >= 0 ? maxHhId : abmDataStore.getMaxHhId();
-		
         
+		     
+		
+		
+		int partitionNumber = Integer.valueOf( propertyMap.get( "partition.number" ) );
+		int numPartition = Integer.valueOf( propertyMap.get( "num.partitions" ) );
+		
+		
+		int numHhPerPartition = (maxHhId-minHhId)/numPartition;
+		List<HouseholdCarAllocation> hhAllocationResultsList = new ArrayList<>();
+		JPPFClient myClient =  new JPPFClient(); 
+		
+		int minHhIdPartition = (partitionNumber-1)*numHhPerPartition;
+		int maxHhIdPartition = (partitionNumber == numPartition)? maxHhId: (partitionNumber)*numHhPerPartition-1;
+		
 		int numHhsPerJob = Integer.valueOf( propertyMap.get( GlobalProperties.NUM_HHS_PER_JOB.toString() ) );
 
-		logger.info( "running Car allocation for hhids: [" + minHhId + "," + maxHhId + "] ..." );
+		logger.info( "running Car allocation for hhids: [" + minHhIdPartition + "," + maxHhIdPartition + "] ..." );
 
 		DataProvider dataProvider = new MemoryMapDataProvider();
         dataProvider.setParameter( "parameterInstance", parameterInstance );
@@ -251,14 +270,11 @@ public class CarAllocatorMain {
         dataProvider.setParameter( "geographyManager", geogManager );
         dataProvider.setParameter( "socioEconomicDataManager", socec );
         
-  		List<HouseholdCarAllocation> hhAllocationResultsList = new ArrayList<>();
         List<List<HouseholdCarAllocation>> lpFailedList = new ArrayList<>();
        	for ( int i=0; i < HhCarAllocator.MAX_ITERATIONS; i++ )
        		lpFailedList.add( new ArrayList<>() );
         
-		// solve schedule adjustment problems for the indicated household ids.
-		// save in a separate list the HouseholdAdjustment objects for households where the LP failed
-        List<Object> resultList = ParallelHelper.PARALLEL_HELPER_DISTRIBUTER.solveDistributed( CarAllocationTask.MODEL_LABEL, new CarAllocationTask(0,0), myClient, dataProvider, minHhId, maxHhId, numHhsPerJob );
+		List<Object> resultList = ParallelHelper.PARALLEL_HELPER_DISTRIBUTER.solveDistributed( CarAllocationTask.MODEL_LABEL, new CarAllocationTask(0,0), myClient, dataProvider, minHhIdPartition, maxHhIdPartition, numHhsPerJob );
        	for ( Object result : (List<Object>)resultList ) {
        		
        		List<Object> taskResultList = (List<Object>)result;       		
@@ -275,21 +291,23 @@ public class CarAllocatorMain {
        	for ( int i=0; i < HhCarAllocator.MAX_ITERATIONS; i++ )
        		lpFailedList.get(i).sort( (v1, v2) -> v1.getHousehold().getNumIndivTripRecords() - v2.getHousehold().getNumIndivTripRecords() < 0.0 ? -1 : v1.getHousehold().getNumIndivTripRecords() - v2.getHousehold().getNumIndivTripRecords() > 0.0 ? 1 : 0 );
        	
+        try {
+//	            if ( ! myClient.isLocalExecutionEnabled() )
+//	                forwarder.provisionSlaveNodes(masterSelector, 0, null);
+            myClient.close();
+        }
+        catch (Exception e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }   
+		
        	//for ( int i=0; i < HhCarAllocator.MAX_ITERATIONS; i++ )
        	//	logger.info( "number of LP failures for end hour: " + HhCarAllocator.MAX_SIMULATION_HOURS[i] + " = " + lpFailedList.get(i).size() + "." );
         logger.info( "Car Allocator finished." );
 
         
         
-        try {
-//            if ( ! myClient.isLocalExecutionEnabled() )
-//                forwarder.provisionSlaveNodes(masterSelector, 0, null);
-            myClient.close();
-        }
-        catch (Exception e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }           
+        
    		
         return hhAllocationResultsList;
         

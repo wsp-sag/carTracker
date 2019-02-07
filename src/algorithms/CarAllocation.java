@@ -181,12 +181,12 @@ public class CarAllocation
 	private int logHhId = -1;
 	private float minimumActivityDuration;
 	boolean reportFinalSolution = false;
-//    static {
-//
-//
-//    	System.loadLibrary("jniortools");
-//
-//    }
+    static {
+
+
+    	System.loadLibrary("jniortools");
+
+    }
 
 
     public CarAllocation( ParameterReader parameterInstance , HashMap<String,String> propertyMap,SocioEconomicDataManager socec, GeographyManager geogManager ) {
