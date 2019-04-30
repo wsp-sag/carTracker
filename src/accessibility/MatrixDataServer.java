@@ -94,10 +94,10 @@ public class MatrixDataServer implements MatrixDataServerIf {
     try {
 
       MatrixInfo info = new MatrixInfo( fileName, matrixType, tableName );
-      System.out.println( "Matrix Identifier: " +  matrixIdentifier );
+      System.out.println( "Matrix Identifier" +  matrixIdentifier );
       if ( ! matrixRegistry.containsKey( matrixIdentifier ) ) {
         logger.info( "creating matrix registry entry for: " + matrixIdentifier );
-        System.out.println( "Matrix Identifier: " +  matrixIdentifier );
+        System.out.println( "Matrix Identifier" +  matrixIdentifier );
         matrixRegistry.put( matrixIdentifier, info );
         Matrix m = loadMatrix( info );
         cacheMatrix ( matrixIdentifier, m );
@@ -231,6 +231,10 @@ public class MatrixDataServer implements MatrixDataServerIf {
       MatrixReader mr = MatrixReader.createReader( MatrixType.TRANSCAD, new File(fileName) );
       matrix = mr.readMatrix( tableName );
     }
+    else if ( matrixType.equalsIgnoreCase("csv") ) {
+        MatrixReader mr = MatrixReader.createReader( MatrixType.CSV, new File(fileName) );
+        matrix = mr.readMatrix( tableName );
+      }
     else {
       throw new RuntimeException( "unsupported matrix type: " + matrixType );
     }
