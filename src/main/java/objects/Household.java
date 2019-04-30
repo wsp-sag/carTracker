@@ -12,6 +12,7 @@ public class Household implements Serializable {
 	private final int hhsize;
 	private final int numAutos;
 	private final int homeMaz;
+	private final int hidAcrossSample;
 	private int numIndivTripRecords;
 	private int numJointTripRecords;
 	private int[][] personTripRecordIds;
@@ -24,11 +25,12 @@ public class Household implements Serializable {
 	private int numAutoTrips;
 	private int ifAvHh;
 	
-	public Household( int hhid, int[] persTypes,int[][] usualCarIds, List<Trip> trips, Map<Integer, int[][]> jointParties, int numAutos, List<AutoTrip> autoTrips, int homeMaz, int numAutoTrips, int ifAvHh) {
+	public Household( int hhid, int hidAcrossSample, int[] persTypes,int[][] usualCarIds, List<Trip> trips, Map<Integer, int[][]> jointParties, int numAutos, List<AutoTrip> autoTrips, int homeMaz, int numAutoTrips, int ifAvHh) {
 		
 		id = hhid;
 		hhsize = persTypes.length - 1;
 		persons = new Person[hhsize + 1];
+		this.hidAcrossSample = hidAcrossSample;
 		this.trips = trips;
 		this.jointParties = jointParties;
 		this.numAutos = numAutos;
@@ -47,6 +49,9 @@ public class Household implements Serializable {
 		return id;
 	}
 	
+	public int getHidAcrossSample(){
+		return hidAcrossSample;
+	}
 	public Person[] getPersons() {
 		return persons;
 	}

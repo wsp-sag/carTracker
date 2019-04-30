@@ -73,7 +73,8 @@ public class AbmDataStore {
 		requiredHhField = Arrays.asList( 
 				propertyMap.get( AbmObjectTranslater.HH_NUM_AUTO_FIELD_KEY ),
 				propertyMap.get(AbmObjectTranslater.HH_MAZ_KEY),
-				propertyMap.get(AbmObjectTranslater.HH_AV_FLAG_KEY));
+				propertyMap.get(AbmObjectTranslater.HH_AV_FLAG_KEY),
+				propertyMap.get(AbmObjectTranslater.HH_ID_WO_SAMPLE_FIELD_KEY));
 		
 		requiredPersonField = Arrays.asList( 
 			propertyMap.get( AbmObjectTranslater.PERSON_TYPE_FIELD_KEY ),

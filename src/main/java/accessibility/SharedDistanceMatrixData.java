@@ -16,6 +16,7 @@ public class SharedDistanceMatrixData implements Serializable
 
   public static final String MATRIX_SERVER_HOST_ADDRESS_KEY = "matrix.server.host.address";
   public static final String MATRIX_SERVER_HOST_PORT_KEY = "matrix.server.host.port";
+  public static final String MATRIX_TYPE_KEY = "matrix.type.key";
   private static final String OP_SOV_DIST_FILE_NAME_KEY = "op.sov.dist.file"; 
   private static final String OP_SOV_DIST_TABLE_NAME_KEY = "op.sov.dist.table"; 
   private static final String OP_SOV_DIST = "op.sov.dist.table";
@@ -54,7 +55,7 @@ public class SharedDistanceMatrixData implements Serializable
 
     String matrixServerHost = propertyMap.get( MATRIX_SERVER_HOST_ADDRESS_KEY ) ;
     String matrixServerPort = propertyMap.get( MATRIX_SERVER_HOST_PORT_KEY );
-    String matrixType = "tpplus";
+    String matrixType = propertyMap.get( MATRIX_TYPE_KEY );
 
     if ( matrixServerHost != null ) {
       MatrixDataServerRmi ms = new MatrixDataServerRmi( matrixServerHost, Integer.parseInt( matrixServerPort ), MatrixDataServer.MATRIX_DATA_SERVER_NAME );
