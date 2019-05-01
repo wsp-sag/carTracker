@@ -19,5 +19,5 @@ Please see `build.gradle` for the carTracker dependencies.
 This work was funded by the [Federal Highway Administration](https://www.fhwa.dot.gov/) under the stewardship of the [Ohio Department of Transportation](http://www.dot.state.oh.us/pages/home.aspx). 
 
 ## License
-See [LICENSE](LICENSE) for details.
+[Apache 2.0](LICENSE)
 
