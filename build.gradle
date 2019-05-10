@@ -17,9 +17,9 @@ dependencies {
 	compile fileTree(dir: '../CMF/common-base/build/libs', include: '*.jar')
 	compile fileTree(dir: '../CMF/common-base/lib', include: '*.jar')
 	compile fileTree(dir: 'lib', include: '*.jar')
-    compile group: 'org.jppf', name: 'jppf-common', version: '5.2.1'
-    compile group: 'org.jppf', name: 'jppf-client', version: '5.2.1'
-    compile group: 'org.jppf', name: 'jppf-node', version: '5.2.1'
+    compile group: 'org.jppf', name: 'jppf-common', version: '5.2.8'
+    compile group: 'org.jppf', name: 'jppf-client', version: '5.2.8'
+    compile group: 'org.jppf', name: 'jppf-node', version: '5.2.8'
     compile group: 'net.sourceforge.jexcelapi', name: 'jxl', version: '2.6.12'
     compile group: 'log4j', name: 'log4j', version: '1.2.17'
     compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.5'

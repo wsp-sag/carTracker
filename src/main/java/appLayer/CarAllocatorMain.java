@@ -249,8 +249,10 @@ public class CarAllocatorMain {
 		     
 		
 		
-		int partitionNumber = Integer.valueOf( propertyMap.get( "partition.number" ) );
-		int numPartition = Integer.valueOf( propertyMap.get( "num.partitions" ) );
+		//int partitionNumber = Integer.valueOf( propertyMap.get( "partition.number" ) );
+		//int numPartition = Integer.valueOf( propertyMap.get( "num.partitions" ) );
+		int partitionNumber = 1;
+		int numPartition = 1;
 		
 		
 		int numHhPerPartition = (maxHhId-minHhId)/numPartition;
