@@ -1183,7 +1183,9 @@ public static void main( String[] args ) {
 
 	long start = System.currentTimeMillis();
 	
+	System.out.println ( "Car Tracker v1.0 - 10may2019." );
     CarAllocatorMain mainObj = new CarAllocatorMain();
+    
 
 	ResourceBundle rb = null;
 	if ( args.length >=0 ) {
