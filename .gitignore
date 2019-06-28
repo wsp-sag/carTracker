@@ -3,3 +3,5 @@
 /.project
 /.gradle/
 /build/
+/gradlew
+/gradlew.bat
