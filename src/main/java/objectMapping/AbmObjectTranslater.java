@@ -760,7 +760,11 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 				personHhAutoTripId[pnum][k] = -1;
 			*/
 			
-			personHhAutoTripId[pnum][k] = Arrays.asList(chronologicalAutoTripIndices).indexOf(tripsHhAutoTripId[index]);
+			if (numAutoTrips> 0)
+				personHhAutoTripId[pnum][k] = Arrays.asList(chronologicalAutoTripIndices).indexOf(tripsHhAutoTripId[index]);
+			else
+				personHhAutoTripId[pnum][k] = -1;
+			
 			personActivityDuration[pnum][k] = activityDuration[index];
 			personCount[pnum]++;
 		}		

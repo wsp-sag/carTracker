@@ -68,6 +68,7 @@ public class HouseholdFactory {
 						destActivityType[m][i], origMazs[m][i], destMazs[m][i], tripModes[m][i], linkedTripIds, tripPlannedDeparture[m][i], 
 						tripPlannedDeparture[m][i] + tripPlannedTime[m][i], tripPlannedTime[m][i], tripExpectedTime[m][i], tripDistance[m][i], 
 						valueOfTime[m][i], tripRecNums[m][i], assignedTripModes[m][i], tripVehIds[m][i], linkedToIds[m][i], jointDriverPnums[m][i], minActDur  );
+				
 				trip.setHhAutoTripId(tripHhAutoTripId[m][i]);
 				tripList.add( trip );
 				
