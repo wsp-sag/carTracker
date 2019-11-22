@@ -376,7 +376,7 @@ public class CarAllocatorMain {
 	
 	String[] periodLabels = new String[]{ "early", "am", "midday", "pm", "late" };		
 	
-	float globalLoop = Float.parseFloat(propertyMap.get("global.loop"));
+	int globalLoop = Integer.parseInt(propertyMap.get("global.loop"));
 	
     double[] probChagingCarOwnership = null;
     if(globalLoop > 1)
@@ -433,7 +433,7 @@ public class CarAllocatorMain {
     double subtractCarFactor = Double.parseDouble(propertyMap.get("subtract.car.factor"));
     
     
-    float msaFactor = 1/globalLoop;
+    float msaFactor = 1.0f/globalLoop;
     
     for ( HouseholdCarAllocation depArrObj : hhCarAllocationResultsList ) {
         
@@ -1184,6 +1184,7 @@ public static void main( String[] args ) {
 	long start = System.currentTimeMillis();
 	
 	System.out.println ( "Car Tracker v1.0 - 10may2019." );
+	System.out.println ( "sanity check - 24jul2019." );
     CarAllocatorMain mainObj = new CarAllocatorMain();
     
 
