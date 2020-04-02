@@ -30,6 +30,7 @@ public class AbmDataStore {
 	private String hhFile;
 	private String personFile;
 	private String tripFile;
+	private String tripModeField;
 
 	
 	private int[] hhIds;
@@ -68,6 +69,7 @@ public class AbmDataStore {
 		hhFile = propertyMap.get( GlobalProperties.ABM_HOUSEHOLD_DATA_FILE_KEY.toString() );
 		personFile = propertyMap.get( GlobalProperties.ABM_PERSON_DATA_FILE_KEY.toString() );
 		tripFile = propertyMap.get( GlobalProperties.ABM_TRIP_DATA_FILE_KEY.toString() );
+		tripModeField = propertyMap.get( GlobalProperties.ABM_TRIP_DATA_FILE_MODE_FIELD_KEY.toString() );
 		
 		
 		requiredHhField = Arrays.asList( 
@@ -134,8 +136,11 @@ public class AbmDataStore {
 		
 
         
-        
-		List<List<String>> hhidStringValues = AbmDataReader.getValuesFromCsvFileForFieldNames( inputFileFolder+"/"+hhFile, Arrays.asList( new String[] {"hhid"} ) );		
+
+        String hhidString = hhIdLabel;
+        if ( propertyMap.containsKey(AbmObjectTranslater.HH_ID_KEY) )
+        	hhidString = propertyMap.get(AbmObjectTranslater.HH_ID_KEY);      
+		List<List<String>> hhidStringValues = AbmDataReader.getValuesFromCsvFileForFieldNames( inputFileFolder+hhFile, Arrays.asList( new String[] {hhidString} ) );		
     	
 		List<Integer> tempList = new ArrayList<>();
 		for ( List<String> temp : hhidStringValues )
@@ -143,10 +148,6 @@ public class AbmDataStore {
 		hhIds = new int[tempList.size()];
 		for ( int i=0; i < tempList.size(); i++ )
 			hhIds[i] = tempList.get(i);
-					
-//            OLD_CSVFileReader reader = new OLD_CSVFileReader(); 
-//            TableDataSet tds = reader.readFile( new File( inputFileFolder + "/" + hhFile ) );
-//            hhIds = tds.getColumnAsInt( hhIdLabel );
 
 		int[] minMax = getMinMaxHhid();
         minHhId = minMax[0];
@@ -199,22 +200,22 @@ public class AbmDataStore {
 		int[] newHhIds = getHhIdArrayInRange( minRange, maxRange );
 		
 		if ( requiredHhField.size() > 0 ) {
-			hhFieldNames = AbmDataReader.getFieldNamesFromCsvFile( inputFileFolder + "/" + hhFile );
-			Map<Integer,List<List<String>>> hhMap = AbmDataReader.getValuesFromCsvFileForHhIdsAndFields( inputFileFolder + "/" + hhFile, hhIdLabel, hhFieldIndexMap, minRange, maxRange, hhFieldNames );
+			hhFieldNames = AbmDataReader.getFieldNamesFromCsvFile( inputFileFolder + hhFile );
+			Map<Integer,List<List<String>>> hhMap = AbmDataReader.getValuesFromCsvFileForHhIdsAndFields( inputFileFolder + hhFile, hhIdLabel, hhFieldIndexMap, minRange, maxRange, hhFieldNames );
 			for ( int hhid : newHhIds )
 				hhRecords.put( hhid, hhMap.get( hhid ) );
 		}
 
 		if ( requiredPersonField.size() > 0 ) {
-			persFieldNames = AbmDataReader.getFieldNamesFromCsvFile( inputFileFolder + "/" + personFile );
-			Map<Integer,List<List<String>>> persMap = AbmDataReader.getValuesFromCsvFileForHhIdsAndFields( inputFileFolder + "/" + personFile, hhIdLabel, personFieldIndexMap, minRange, maxRange, persFieldNames );
+			persFieldNames = AbmDataReader.getFieldNamesFromCsvFile( inputFileFolder + personFile );
+			Map<Integer,List<List<String>>> persMap = AbmDataReader.getValuesFromCsvFileForHhIdsAndFields( inputFileFolder + personFile, hhIdLabel, personFieldIndexMap, minRange, maxRange, persFieldNames );
 			for ( int hhid : newHhIds )
 				persRecords.put( hhid, persMap.get( hhid ) );
 		}
 
 		if ( requiredTripField.size() > 0 ) {
-			tripFieldNames = AbmDataReader.getFieldNamesFromCsvFile( inputFileFolder + "/" + tripFile );
-			Map<Integer,List<List<String>>> indTripMap = AbmDataReader.getValuesFromCsvFileForHhIdsAndFields( inputFileFolder + "/" + tripFile, hhIdLabel, tripFieldIndexMap, minRange, maxRange, tripFieldNames );
+			tripFieldNames = AbmDataReader.getFieldNamesFromCsvFile( inputFileFolder + tripFile );
+			Map<Integer,List<List<String>>> indTripMap = AbmDataReader.getValuesFromCsvFileForHhIdsAndFields( inputFileFolder + tripFile, hhIdLabel, tripFieldIndexMap, minRange, maxRange, tripFieldNames );
 			for ( int hhid : newHhIds ){
 				tripRecords.put( hhid, indTripMap.get( hhid ) );
 				if(indTripMap.get( hhid ) !=null){
@@ -230,7 +231,7 @@ public class AbmDataStore {
 	private List<List<String>>  getAutoTrips(List<List<String>> indiTrips){
 		List<List<String>> result = new ArrayList<List<String>> ();
 		for(List<String> record : indiTrips ){
-			String modeValue = record.get( tripFieldIndexMap.get("mode") );
+			String modeValue = record.get( tripFieldIndexMap.get( tripModeField ) );
 			int mode = Integer.parseInt( modeValue );
 			if(mode == AbmObjectTranslater.SOV_MODE || mode == AbmObjectTranslater.HOV2_DR_MODE || mode == AbmObjectTranslater.HOV3_DR_MODE)
 				result.add(record);
@@ -289,13 +290,13 @@ public class AbmDataStore {
 	
 	private void logDatastoreRecords( int hhid ) {
 
-		System.out.println( "\n" + inputFileFolder + "/" + hhFile );
+		System.out.println( "\n" + inputFileFolder + hhFile );
 		logResults( hhFieldNames, hhRecords.get(hhid) );
 		
-		System.out.println( "\n" + inputFileFolder + "/" + personFile );
+		System.out.println( "\n" + inputFileFolder + personFile );
 		logResults( persFieldNames, persRecords.get(hhid) );
 
-		System.out.println( "\n" + inputFileFolder + "/" + tripFile );
+		System.out.println( "\n" + inputFileFolder + tripFile );
 		logResults( tripFieldNames, tripRecords.get(hhid) );
 
 	}
