@@ -332,16 +332,16 @@ public class CarAllocatorMain {
 		String mpo = propertyMap.get( "region" );
 		String year = propertyMap.get( "year" );
 		
-		cavTripTableFiles[0] = propertyMap.get("result.path") + "/"+mpo+year+"_Auto_"+ propertyMap.get( TRIP_MATRIX_EA_FILE_KEY ) + "_Cav";
-		cavTripTableFiles[1] = propertyMap.get("result.path") + "/"+mpo+year+"_Auto_"+ propertyMap.get( TRIP_MATRIX_AM_FILE_KEY ) + "_Cav";
-		cavTripTableFiles[2] = propertyMap.get("result.path") + "/"+mpo+year+"_Auto_"+ propertyMap.get( TRIP_MATRIX_MD_FILE_KEY ) + "_Cav";
-		cavTripTableFiles[3] = propertyMap.get("result.path") + "/"+mpo+year+"_Auto_"+ propertyMap.get( TRIP_MATRIX_PM_FILE_KEY ) + "_Cav";
-		cavTripTableFiles[4] = propertyMap.get("result.path") + "/"+mpo+year+"_Auto_"+ propertyMap.get( TRIP_MATRIX_EV_FILE_KEY ) + "_Cav";
-		nonCavTripTableFiles[0] = propertyMap.get("result.path") + "/"+mpo+year+"_Auto_"+ propertyMap.get( TRIP_MATRIX_EA_FILE_KEY ) + "_nonCav";
-		nonCavTripTableFiles[1] = propertyMap.get("result.path") + "/"+mpo+year+"_Auto_"+ propertyMap.get( TRIP_MATRIX_AM_FILE_KEY ) + "_nonCav";
-		nonCavTripTableFiles[2] = propertyMap.get("result.path") + "/"+mpo+year+"_Auto_"+ propertyMap.get( TRIP_MATRIX_MD_FILE_KEY ) + "_nonCav";
-		nonCavTripTableFiles[3] = propertyMap.get("result.path") + "/"+mpo+year+"_Auto_"+ propertyMap.get( TRIP_MATRIX_PM_FILE_KEY ) + "_nonCav";
-		nonCavTripTableFiles[4] = propertyMap.get("result.path") + "/"+mpo+year+"_Auto_"+ propertyMap.get( TRIP_MATRIX_EV_FILE_KEY ) + "_nonCav";
+		cavTripTableFiles[0] = propertyMap.get("result.path") + "/"+mpo+year+"_Auto_" + "_Cav" + propertyMap.get( TRIP_MATRIX_EA_FILE_KEY );
+		cavTripTableFiles[1] = propertyMap.get("result.path") + "/"+mpo+year+"_Auto_" + "_Cav" + propertyMap.get( TRIP_MATRIX_AM_FILE_KEY );
+		cavTripTableFiles[2] = propertyMap.get("result.path") + "/"+mpo+year+"_Auto_" + "_Cav" + propertyMap.get( TRIP_MATRIX_MD_FILE_KEY );
+		cavTripTableFiles[3] = propertyMap.get("result.path") + "/"+mpo+year+"_Auto_" + "_Cav" + propertyMap.get( TRIP_MATRIX_PM_FILE_KEY );
+		cavTripTableFiles[4] = propertyMap.get("result.path") + "/"+mpo+year+"_Auto_" + "_Cav" + propertyMap.get( TRIP_MATRIX_EV_FILE_KEY );
+		nonCavTripTableFiles[0] = propertyMap.get("result.path") + "/"+mpo+year+"_Auto_" + "_nonCav" + propertyMap.get( TRIP_MATRIX_EA_FILE_KEY );
+		nonCavTripTableFiles[1] = propertyMap.get("result.path") + "/"+mpo+year+"_Auto_" + "_nonCav" + propertyMap.get( TRIP_MATRIX_AM_FILE_KEY );
+		nonCavTripTableFiles[2] = propertyMap.get("result.path") + "/"+mpo+year+"_Auto_" + "_nonCav" + propertyMap.get( TRIP_MATRIX_MD_FILE_KEY );
+		nonCavTripTableFiles[3] = propertyMap.get("result.path") + "/"+mpo+year+"_Auto_" + "_nonCav" + propertyMap.get( TRIP_MATRIX_PM_FILE_KEY );
+		nonCavTripTableFiles[4] = propertyMap.get("result.path") + "/"+mpo+year+"_Auto_" + "_nonCav" + propertyMap.get( TRIP_MATRIX_EV_FILE_KEY );
 		
 		cavTripTables = new float[numberOfPeriods][autoTripTableNames.length*numberOfVotCategories][geogManager.getTazValues().length][geogManager.getTazValues().length];
 		nonCavTripTables = new float[numberOfPeriods][autoTripTableNames.length*numberOfVotCategories][geogManager.getTazValues().length][geogManager.getTazValues().length];
@@ -1253,7 +1253,7 @@ public static void main( String[] args ) {
 	
     CarAllocatorMain mainObj = new CarAllocatorMain();
 
-	System.out.println ( "CarTracker_Ohio, 02Apr2020-v1, starting." );
+	System.out.println ( "CarTracker_Ohio, 06Apr2020-v1, starting." );
     
 	ResourceBundle rb = null;
 	if ( args.length >=0 ) {
