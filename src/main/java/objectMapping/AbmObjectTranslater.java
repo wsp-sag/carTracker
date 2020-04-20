@@ -67,9 +67,9 @@ public class AbmObjectTranslater {
 	
 	public static final String HH_NUM_AUTO_FIELD_KEY = "hh.num.auto.field";
 	public static final String HH_ID_WO_SAMPLE_FIELD_KEY = "hh.id.across.sample.field";
-	
+
 	public static final String HH_ID_KEY = "hh.file.id.field";
-	public static final String HH_MAZ_KEY = "hh.file.maz.field";
+	public static final String HH_MAZ_KEY = "hh.maz.field";
 	public static final String HH_AV_FLAG_KEY="hh.av.flag.field";
 	public static final String PERSON_TYPE_FIELD_KEY = "person.type.field";
 	public static final String PERSON_USUAL_CAR_ID_FIELD_KEY = "person.usualcar.id.field";
@@ -100,7 +100,7 @@ public class AbmObjectTranslater {
 	
 	private String hhIdField;
 	private String persTypeField;
-	
+
 	private String tripIdField;
 	private String jointTripIdField;
 	private String tripPnumField;
@@ -764,7 +764,11 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 				personHhAutoTripId[pnum][k] = -1;
 			*/
 			
-			personHhAutoTripId[pnum][k] = Arrays.asList(chronologicalAutoTripIndices).indexOf(tripsHhAutoTripId[index]);
+			if (numAutoTrips> 0)
+				personHhAutoTripId[pnum][k] = Arrays.asList(chronologicalAutoTripIndices).indexOf(tripsHhAutoTripId[index]);
+			else
+				personHhAutoTripId[pnum][k] = -1;
+			
 			personActivityDuration[pnum][k] = activityDuration[index];
 			personCount[pnum]++;
 		}		

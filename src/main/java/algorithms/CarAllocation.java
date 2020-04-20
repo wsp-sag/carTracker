@@ -513,7 +513,7 @@ public class CarAllocation
         	}
 
 
-        	if(autoTrips.size()>0){
+//        	if(autoTrips.size()>0){
 	        	for ( int m=1; m < persons.length; m++ ) {
 
 	        		for ( int j=0; j < NUM_P_VARIABLE_INDICES; j++ )
@@ -548,7 +548,7 @@ public class CarAllocation
 
 		    	}
         	}
-    	}
+//    	}
     	catch ( Exception e ) {
     		logger.error( "exception caught for hhid=" + hh.getId(), e );
     		System.exit(-1);
@@ -781,7 +781,7 @@ public class CarAllocation
 
 
 
-    	if(autoTrips.size()>0){
+    	//if(autoTrips.size()>0){
     	for ( int m=1; m < persons.length; m++ ) {
 
 
@@ -871,7 +871,7 @@ public class CarAllocation
 		    		}
 	        	}
 
-    		}
+//    		}
     		}
     	}
 
