@@ -67,6 +67,8 @@ public class AbmObjectTranslater {
 	
 	public static final String HH_NUM_AUTO_FIELD_KEY = "hh.num.auto.field";
 	public static final String HH_ID_WO_SAMPLE_FIELD_KEY = "hh.id.across.sample.field";
+
+	public static final String HH_ID_KEY = "hh.file.id.field";
 	public static final String HH_MAZ_KEY = "hh.maz.field";
 	public static final String HH_AV_FLAG_KEY="hh.av.flag.field";
 	public static final String PERSON_TYPE_FIELD_KEY = "person.type.field";
@@ -96,8 +98,9 @@ public class AbmObjectTranslater {
 
 	private int abmStartOfDayMinute;
 	
+	private String hhIdField;
 	private String persTypeField;
-	
+
 	private String tripIdField;
 	private String jointTripIdField;
 	private String tripPnumField;
@@ -150,6 +153,7 @@ public class AbmObjectTranslater {
 		int numRecords = dataStore.getNumTripRecords(hhid);
 		numTripRecords = numRecords;
 		
+		hhIdField =  propertyMap.get( HH_ID_KEY );
 		persTypeField =  propertyMap.get( PERSON_TYPE_FIELD_KEY ) ;
 		minDuration = 5;
 		tripIdField = propertyMap.get( TRIP_ID_FIELD_KEY ) ;

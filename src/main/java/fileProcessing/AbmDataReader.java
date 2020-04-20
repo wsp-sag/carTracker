@@ -87,7 +87,7 @@ public class AbmDataReader {
                     int fieldIndexAll = 0;
                     Integer valuesIndex = null;
                     int stringValueIndex = 0;
-                    while ( st.hasMoreTokens() ) {
+                    while ( st.hasMoreTokens() && valuesMap.size() < fieldIndexMap.size() ) {
 
                     	String fieldString = st.nextToken();
                     	
