@@ -68,23 +68,16 @@ public interface WriteCarAllocationOutputFilesIf {
     }
 
 
-    default float[][] getTripTableOrderedByExternalTazValues( int[] externalTazOrder, float[][] tripTable, int[] tazIndices ) {
+    default float[][] getTripTableOrderedByExternalTazValues( int[] externalTazOrder, float[][] tripTable, int[] tazValues ) {
     	
-    	float[][] orderedTripTable = new float[tazIndices.length][tazIndices.length];
+    	float[][] orderedTripTable = new float[tazValues.length][tazValues.length];
     	
-    	for ( int i=0; i < tazIndices.length; i++ ) {
-    		if(tazIndices[i]>=0){
-    			int k = externalTazOrder[tazIndices[i]];
-    			
-    			for ( int j=0; j < tazIndices.length; j++ ) {
-    				if(tazIndices[j]>=0){
-    				int m = externalTazOrder[tazIndices[j]];
-    				
-    				orderedTripTable[i-1][j-1] = tripTable[k][m]; 
-    				}
-    			}
-    		}
-
+    	for ( int i=0; i < tazValues.length; i++ ) {
+    		int k = externalTazOrder[i];
+			for ( int j=0; j < tazValues.length; j++ ) {
+				int m = externalTazOrder[j];				
+				orderedTripTable[i][j] = tripTable[k][m]; 
+			}
     	}
     	
     	return orderedTripTable;

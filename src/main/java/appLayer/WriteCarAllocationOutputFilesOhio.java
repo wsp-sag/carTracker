@@ -160,7 +160,7 @@ public class WriteCarAllocationOutputFilesOhio implements WriteCarAllocationOutp
 		
 		int[] tazValues = geogManager.getTazValues();
 		int[] tazValuesOrder = IndexSort.indexSort( tazValues );
-		int[] extNumbers = new int[tazIndices.length+1];
+		int[] extNumbers = new int[tazValues.length+1];
 		
 		for ( int i=0; i < tazValues.length; i++ ) {
 				int k = tazValuesOrder[i];
@@ -898,7 +898,7 @@ public class WriteCarAllocationOutputFilesOhio implements WriteCarAllocationOutp
 	    			for ( int j=0; j < numModeTables-1; j++ ) {
 	    				for (int v = 0; v<numberOfVotCategories; v++){
 	    					String description = periodLabels[i] + " period C/AV " + autoTripTableNames[j] + " trips by vot segment " + String.valueOf(v) ;
-	    					float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, cavTripTables[i][(j)*numberOfVotCategories+v],tazIndices );
+	    					float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, cavTripTables[i][(j)*numberOfVotCategories+v], tazValues );
 	    					matrices[j*numberOfVotCategories+v] = new Matrix( autoTripTableNames[j]+"vot" + String.valueOf(v), description, orderedTable );
 	    					matrices[j*numberOfVotCategories+v].setExternalNumbers( extNumbers );
 	    				}
@@ -906,7 +906,7 @@ public class WriteCarAllocationOutputFilesOhio implements WriteCarAllocationOutp
 	    
 	    			for (int v = 0; v<numberOfVotCategories; v++){
 	    				String description = periodLabels[i] + " period C/AV empty trips by vot segment " + String.valueOf(v) ;
-	    				float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, cavTripTables[i][(numModeTables-1)*numberOfVotCategories+v],tazIndices );
+	    				float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, cavTripTables[i][(numModeTables-1)*numberOfVotCategories+v], tazValues );
 	    				matrices[(numModeTables-1)*numberOfVotCategories+v] = new Matrix( "empty"+"vot" + String.valueOf(v), description, orderedTable );
 	    				matrices[(numModeTables-1)*numberOfVotCategories+v].setExternalNumbers( extNumbers );
 	    			}
@@ -916,13 +916,13 @@ public class WriteCarAllocationOutputFilesOhio implements WriteCarAllocationOutp
 	  			  
 	    			for ( int j=0; j < numModeTables-1; j++ ) {
 	  					String description = periodLabels[i] + " period C/AV " + autoTripTableNames[j] + " trips";
-	  					float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, cavTripTables[i][j],tazIndices );
+	  					float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, cavTripTables[i][j], tazValues );
 	  					matrices[j] = new Matrix( autoTripTableNames[j], description, orderedTable );
 	  					matrices[j].setExternalNumbers( extNumbers );
 	    			}
 	    
 	  				String description = periodLabels[i] + " period C/AV empty trips";
-	  				float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, cavTripTables[i][(numModeTables-1)],tazIndices );
+	  				float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, cavTripTables[i][(numModeTables-1)], tazValues );
 	  				matrices[(numModeTables-1)] = new Matrix( "empty", description, orderedTable );
 	  				matrices[(numModeTables-1)].setExternalNumbers( extNumbers );
 
@@ -948,7 +948,7 @@ public class WriteCarAllocationOutputFilesOhio implements WriteCarAllocationOutp
     			for ( int j=0; j < numModeTables-1; j++ ) {
     				for (int v = 0; v<numberOfVotCategories; v++){
     					String description = periodLabels[i] + " period non-C/AV " + autoTripTableNames[j] + " trips by vot segment " + String.valueOf(v) ;
-    					float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][(j)*numberOfVotCategories+v],tazIndices );
+    					float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][(j)*numberOfVotCategories+v], tazValues );
     					matrices[j*numberOfVotCategories+v] = new Matrix( autoTripTableNames[j]+"vot" + String.valueOf(v), description, orderedTable );
     					matrices[j*numberOfVotCategories+v].setExternalNumbers( extNumbers );
     				}
@@ -956,7 +956,7 @@ public class WriteCarAllocationOutputFilesOhio implements WriteCarAllocationOutp
     
     			for (int v = 0; v<numberOfVotCategories; v++){
     				String description = periodLabels[i] + " period non-C/AV empty trips by vot segment " + String.valueOf(v) ;
-    				float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][(numModeTables-1)*numberOfVotCategories+v],tazIndices );
+    				float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][(numModeTables-1)*numberOfVotCategories+v], tazValues );
     				matrices[(numModeTables-1)*numberOfVotCategories+v] = new Matrix( "empty"+"vot" + String.valueOf(v), description, orderedTable );
     				matrices[(numModeTables-1)*numberOfVotCategories+v].setExternalNumbers( extNumbers );
     			}
@@ -966,13 +966,13 @@ public class WriteCarAllocationOutputFilesOhio implements WriteCarAllocationOutp
   			  
     			for ( int j=0; j < numModeTables-1; j++ ) {
   					String description = periodLabels[i] + " period non-C/AV " + autoTripTableNames[j] + " trips";
-  					float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][j],tazIndices );
+  					float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][j], tazValues );
   					matrices[j] = new Matrix( autoTripTableNames[j], description, orderedTable );
   					matrices[j].setExternalNumbers( extNumbers );
     			}
     
   				String description = periodLabels[i] + " period non-C/AV empty trips";
-  				float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][(numModeTables-1)],tazIndices );
+  				float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][(numModeTables-1)], tazValues );
   				matrices[(numModeTables-1)] = new Matrix( "empty", description, orderedTable );
   				matrices[(numModeTables-1)].setExternalNumbers( extNumbers );
 

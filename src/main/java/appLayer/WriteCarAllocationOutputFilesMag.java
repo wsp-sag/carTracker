@@ -142,17 +142,17 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
         MatrixDataServer matrixDataServer = new MatrixDataServer();
         matrixHandler = new MatrixDataLocalHandler(matrixDataServer, matrixType);
 		
-		int[] tazIndices = geogManager.getTazIndices();
-		
-		int[] tazValues = geogManager.getTazValues();
-		int[] tazValuesOrder = IndexSort.indexSort( tazValues );
-		int[] extNumbers = new int[tazIndices.length+1];
-		
-		for ( int i=0; i < tazValues.length; i++ ) {
-				int k = tazValuesOrder[i];
-				extNumbers[i+1] = tazValues[k];
-		}		
-		
+    	int[] tazIndices = geogManager.getTazIndices();
+    	
+    	int[] tazValues = geogManager.getTazValues();
+    	int[] tazValuesOrder = IndexSort.indexSort( tazValues );
+    	int[] extNumbers = new int[tazValues.length+1];
+    	
+    	for ( int i=0; i < tazValues.length; i++ ) {
+    			int k = tazValuesOrder[i];
+    			extNumbers[i+1] = tazValues[k];
+    	}		
+				
 		String[] periodLabels = new String[]{ "early", "am", "midday", "pm", "late" };		
 
 
@@ -874,7 +874,7 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
   	    				for (int v = 0; v<numberOfVotCategories; v++){
   	    					int matrixIndex = j*numberOfVotCategories + v;
   	    					String description = periodLabels[i] + " period C/AV " + autoTripTableNames[j] + " trips by vot segment " + String.valueOf(v) ;
-  	    					float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, cavTripTables[i][(j)*numberOfVotCategories+v],tazIndices );
+  	    					float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, cavTripTables[i][(j)*numberOfVotCategories+v], tazValues );
   	    					tripTableNames[matrixIndex] = autoTripTableNames[j]+"_cav"+"_vot" + String.valueOf(v);
   	    					matrices[matrixIndex] = new Matrix( tripTableNames[matrixIndex], description, orderedTable );
   	    					matrices[matrixIndex].setExternalNumbers( extNumbers );
@@ -883,7 +883,7 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
   	    			for (int v = 0; v<numberOfVotCategories; v++){
   	    				int matrixIndex = (numModeTables-1)*numberOfVotCategories + v;
   	    				String description = periodLabels[i] + " period C/AV empty trips by vot segment " + String.valueOf(v) ;
-  	    				float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, cavTripTables[i][(numModeTables-1)*numberOfVotCategories+v],tazIndices );
+  	    				float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, cavTripTables[i][(numModeTables-1)*numberOfVotCategories+v], tazValues );
   						tripTableNames[matrixIndex] = "empty_cav_vot" + String.valueOf(v);
   	    				matrices[matrixIndex] = new Matrix( tripTableNames[matrixIndex], description, orderedTable );
   	    				matrices[matrixIndex].setExternalNumbers( extNumbers );
@@ -894,7 +894,7 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
   	    				for (int v = 0; v<numberOfVotCategories; v++){
   	    					int matrixIndex = j*numberOfVotCategories + v;
   	    					String description = periodLabels[i] + " period C/AV " + autoTripTableNames[j] + " trips by vot segment " + String.valueOf(v) ;
-  	    					float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, cavTripTables[i][(j)*numberOfVotCategories+v],tazIndices );
+  	    					float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, cavTripTables[i][(j)*numberOfVotCategories+v], tazValues );
   	    					tripTableNames[matrixIndex] = autoTripTableNames[j]+"_cav"+"_vot" + String.valueOf(v);
   	    					matrices[matrixIndex] = new Matrix( tripTableNames[matrixIndex], description, orderedTable );
   	    					matrices[matrixIndex].setExternalNumbers( extNumbers );
@@ -909,7 +909,7 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
   	    				for (int v = 0; v<numberOfVotCategories; v++){
   	    					int matrixIndex = j*numberOfVotCategories + v;
   	    					String description = periodLabels[i] + " period non-C/AV " + autoTripTableNames[j] + " trips by vot segment " + String.valueOf(v) ;
-  	    					float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][(j)*numberOfVotCategories+v],tazIndices );
+  	    					float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][(j)*numberOfVotCategories+v], tazValues );
   	    					tripTableNames[matrixIndex] = autoTripTableNames[j]+"_vot" + String.valueOf(v);
   	    					matrices[matrixIndex] = new Matrix( tripTableNames[matrixIndex], description, orderedTable );
   	    					matrices[matrixIndex].setExternalNumbers( extNumbers );
@@ -918,7 +918,7 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
   	    			for (int v = 0; v<numberOfVotCategories; v++){
   	    				int matrixIndex = (numModeTables-1)*numberOfVotCategories + v;
   	    				String description = periodLabels[i] + " period non-C/AV empty trips by vot segment " + String.valueOf(v) ;
-  	    				float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][(numModeTables-1)*numberOfVotCategories+v],tazIndices );
+  	    				float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][(numModeTables-1)*numberOfVotCategories+v], tazValues );
   						tripTableNames[matrixIndex] = "empty_vot" + String.valueOf(v);
   	    				matrices[matrixIndex] = new Matrix( tripTableNames[matrixIndex], description, orderedTable );
   	    				matrices[matrixIndex].setExternalNumbers( extNumbers );
@@ -929,7 +929,7 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
   	    				for (int v = 0; v<numberOfVotCategories; v++){
   	    					int matrixIndex = j*numberOfVotCategories + v;
   	    					String description = periodLabels[i] + " period " + autoTripTableNames[j] + " trips by vot segment " + String.valueOf(v) ;
-  	    					float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][(j)*numberOfVotCategories+v],tazIndices );
+  	    					float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][(j)*numberOfVotCategories+v], tazValues );
   	    					tripTableNames[matrixIndex] = autoTripTableNames[j]+"_vot" + String.valueOf(v);
   	    					matrices[matrixIndex] = new Matrix( tripTableNames[matrixIndex], description, orderedTable );
   	    					matrices[matrixIndex].setExternalNumbers( extNumbers );
@@ -944,28 +944,28 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
   					
   	    			for ( int j=0; j < numModeTables-1; j++ ) {
   	  					String description = periodLabels[i] + " period C/AV " + autoTripTableNames[j] + " trips";
-  	  					float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, cavTripTables[i][j],tazIndices );
+  	  					float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, cavTripTables[i][j], tazValues );
   						tripTableNames[j] = autoTripTableNames[j]+"_cav";
   	  					matrices[j] = new Matrix( tripTableNames[j], description, orderedTable );
   	  					matrices[j].setExternalNumbers( extNumbers );
   	    			}
   	    
   	  				String description = periodLabels[i] + " period C/AV empty trips";
-  	  				float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, cavTripTables[i][(numModeTables-1)],tazIndices );
+  	  				float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, cavTripTables[i][(numModeTables-1)], tazValues );
   					tripTableNames[(numModeTables-1)] = "empty_cav";
   	  				matrices[(numModeTables-1)] = new Matrix( tripTableNames[(numModeTables-1)], description, orderedTable );
   	  				matrices[(numModeTables-1)].setExternalNumbers( extNumbers );
   	  				
   	    			for ( int j=0; j < numModeTables-1; j++ ) {
   	  					description = periodLabels[i] + " period non-C/AV " + autoTripTableNames[j] + " trips";
-  	  					orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][j],tazIndices );
+  	  					orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][j], tazValues );
   						tripTableNames[j+offset] = autoTripTableNames[j];
   	  					matrices[j+offset] = new Matrix( tripTableNames[j+offset], description, orderedTable );
   	  					matrices[j+offset].setExternalNumbers( extNumbers );
   	    			}
   	    
   	  				description = periodLabels[i] + " period non-C/AV empty trips";
-  	  				orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][(numModeTables-1)],tazIndices );
+  	  				orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][(numModeTables-1)], tazValues );
   	  				tripTableNames[(numModeTables-1)+offset] = "empty";
   	  				matrices[(numModeTables-1)+offset] = new Matrix( tripTableNames[(numModeTables-1)+offset], description, orderedTable );
   	  				matrices[(numModeTables-1)+offset].setExternalNumbers( extNumbers );
@@ -975,7 +975,7 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
   					
   	    			for ( int j=0; j < numModeTables; j++ ) {
   	  					String description = periodLabels[i] + " period " + autoTripTableNames[j] + " trips";
-  	  					float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][j],tazIndices );
+  	  					float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][j], tazValues );
   						tripTableNames[j] = autoTripTableNames[j];
   	  					matrices[j] = new Matrix( tripTableNames[j], description, orderedTable );
   	  					matrices[j].setExternalNumbers( extNumbers );
