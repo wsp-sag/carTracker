@@ -9,13 +9,17 @@ import accessibility.GeographyManager;
 import accessibility.SharedDistanceMatrixData;
 import accessibility.SocioEconomicDataManager;
 import objects.HouseholdCarAllocation;
+import utility.ConstantsIf;
 import utility.Parsing;
 
 public interface WriteCarAllocationOutputFilesIf {
 
+	public static final String MODEL_REGION_PROPERTY = "region";
+	public static final String SCENARIO_NAME_PROPERTY = "scenario.name";
+	public static final String SEPARATE_CAV_TRIP_TABLES_KEY = "separate.cav.trip.matrices";
+	
     public static final int TRIP_REPOSITIONING_PURPOSE = 20;
     
-	public static final String SEPARATE_CAV_TRIP_TABLES_KEY = "separate.cav.trip.matrices";
 	public static final String OUTPUT_TRIP_TABLE_FORMAT_KEY = "output.trip.matrices.format";
 	public static final String OUTPUT_TRIP_TABLE_CSV_FILENAME_KEY = "output.trip.matrices.csv.file";
 	public static final String MODE_TABLE_NAMES_KEY = "output.trip.matrix.mode.tables";
@@ -47,7 +51,8 @@ public interface WriteCarAllocationOutputFilesIf {
 	public void writeCarAllocationOutputFile( Logger logger, HashMap<String, String> propertyMap, 
 			    	String outputTripListFilename, String outputDisaggregateCarUseFileName, String outputProbCarChangeFileName,
 			    	List<HouseholdCarAllocation> hhCarAllocationResultsList, GeographyManager geogManager,
-			    	SharedDistanceMatrixData sharedDistanceObject, SocioEconomicDataManager socec);
+			    	SharedDistanceMatrixData sharedDistanceObject, SocioEconomicDataManager socec,
+			    	ConstantsIf constants);
 	
 
     default int getTripTablePeriod(int departureInterval, int[][] periodIntervals){
@@ -108,5 +113,12 @@ public interface WriteCarAllocationOutputFilesIf {
     	return hhProbChangeCarOwnership;
     	
     }
+
+    
+	default String insertBeforeExtension( String filename, String insertString ) {	
+	  	int dotIndex = filename.indexOf(".");
+	  	String extension = filename.substring(dotIndex+1);
+	  	return filename.substring(0, dotIndex) + insertString + "." + extension;
+	}
 
 }
