@@ -2,7 +2,7 @@ apply plugin: 'java'
  
 jar {
     baseName = 'carTracker'
-    version =  '0.1'
+    version =  '24Apr2020_v1.03'
 }
  
 repositories {
@@ -13,8 +13,9 @@ sourceCompatibility = 1.8
 targetCompatibility = 1.8
  
 dependencies {
-	//compile files('../CMF/common-base/build/classes/main')
+	//compile files('../CMF/common-base/bin/main')
 	compile fileTree(dir: '../CMF/common-base/build/libs', include: '*.jar')
+	//compile project(':common-base')
 	compile fileTree(dir: '../CMF/common-base/lib', include: '*.jar')
 	compile fileTree(dir: 'lib', include: '*.jar')
     compile group: 'org.jppf', name: 'jppf-common', version: '5.2.8'

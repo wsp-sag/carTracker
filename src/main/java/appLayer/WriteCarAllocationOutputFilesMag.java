@@ -19,8 +19,6 @@ import accessibility.SocioEconomicDataManager;
 import algorithms.CarAllocation;
 import utility.CommonProcedures;
 import utility.ConstantsIf;
-import utility.ConstantsMag;
-import utility.ConstantsOhio;
 
 import com.pb.common.matrix.Matrix;
 import com.pb.common.matrix.MatrixType;
@@ -51,7 +49,6 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 
 	private MatrixDataHandlerIf matrixHandler;
 	private boolean ifExternalStationsIncluded = false;
-	private boolean separateTripTables = false;
 //	private boolean outputTripTableSeparatedByAutoTransit;
 	private int numberOfPeriods;
 	
@@ -59,9 +56,7 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	private int numberOfVotCategories = 1;
 	
 	private String[] autoTripTableNames;
-	private String[] autoTripTableNamesWithVot;
-	private String[] cavTripTableFiles;
-	private String[] nonCavTripTableFiles;
+	private String[] tripTableFiles;
 //	private String[] transitTripTableNames;
 //	private String[] transitTripTableFiles;
 //	private String[] otherTripTableNames;
@@ -71,11 +66,13 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	private float[][][][] cavTripTables;
 	private float[][][][] nonCavTripTables;
 
+	private boolean separateCavFiles = false;
+
 	
     public void writeCarAllocationOutputFile( Logger logger, HashMap<String, String> propertyMap, 
     	String outputTripListFilename, String outputDisaggregateCarUseFileName, String outputProbCarChangeFileName,
     	List<HouseholdCarAllocation> hhCarAllocationResultsList, GeographyManager geogManager,
-    	SharedDistanceMatrixData sharedDistanceObject, SocioEconomicDataManager socec) {
+    	SharedDistanceMatrixData sharedDistanceObject, SocioEconomicDataManager socec, ConstantsIf constants) {
 
 
         threhsoldRoundUp = Float.parseFloat(propertyMap.get(GlobalProperties.ROUND_UP_THRESHOLD.toString()));
@@ -83,7 +80,9 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
         ifExternalStationsIncluded = Boolean.valueOf(propertyMap.get("include.external.stations")); 
     	
         
-        ConstantsIf constants = new ConstantsMag();
+		String separateCavFilesString = propertyMap.get( SEPARATE_CAV_TRIP_TABLES_KEY );
+		if ( separateCavFilesString != null )
+			separateCavFiles = Boolean.valueOf( separateCavFilesString );
 
 		numberOfPeriods = Integer.valueOf( propertyMap.get(NUM_OUTPUT_PERIODS_KEY));
 		
@@ -95,8 +94,7 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 		String tripTableNamesString = propertyMap.get( AUTO_MODE_TABLE_NAMES_KEY );
 		autoTripTableNames = utility.Parsing.getStringArrayFromCsvString( tripTableNamesString );
 		
-		cavTripTableFiles = new String[numberOfPeriods];
-		nonCavTripTableFiles = new String[numberOfPeriods];
+		tripTableFiles = new String[numberOfPeriods];
 
 		int numVotSegments = Integer.valueOf( propertyMap.get( "output.number.vot.segments" ) );
 		if ( numVotSegments > 1 ) {
@@ -111,20 +109,18 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 
 
 
-		cavTripTableFiles[0] = propertyMap.get("result.path") + "/" + insertBeforeExtension( propertyMap.get( TRIP_MATRIX_EA_FILE_KEY ), "_Cav" );
-		cavTripTableFiles[1] = propertyMap.get("result.path") + "/" + insertBeforeExtension( propertyMap.get( TRIP_MATRIX_AM_FILE_KEY ), "_Cav" );
-		cavTripTableFiles[2] = propertyMap.get("result.path") + "/" + insertBeforeExtension( propertyMap.get( TRIP_MATRIX_MD_FILE_KEY ), "_Cav" );
-		cavTripTableFiles[3] = propertyMap.get("result.path") + "/" + insertBeforeExtension( propertyMap.get( TRIP_MATRIX_PM_FILE_KEY ), "_Cav" );
-		cavTripTableFiles[4] = propertyMap.get("result.path") + "/" + insertBeforeExtension( propertyMap.get( TRIP_MATRIX_EV_FILE_KEY ), "_Cav" );
-		nonCavTripTableFiles[0] = propertyMap.get("result.path") + "/" + propertyMap.get( TRIP_MATRIX_EA_FILE_KEY );
-		nonCavTripTableFiles[1] = propertyMap.get("result.path") + "/" + propertyMap.get( TRIP_MATRIX_AM_FILE_KEY );
-		nonCavTripTableFiles[2] = propertyMap.get("result.path") + "/" + propertyMap.get( TRIP_MATRIX_MD_FILE_KEY );
-		nonCavTripTableFiles[3] = propertyMap.get("result.path") + "/" + propertyMap.get( TRIP_MATRIX_PM_FILE_KEY );
-		nonCavTripTableFiles[4] = propertyMap.get("result.path") + "/" + propertyMap.get( TRIP_MATRIX_EV_FILE_KEY );
+		tripTableFiles[0] = propertyMap.get("result.path") + propertyMap.get( TRIP_MATRIX_EA_FILE_KEY );
+		tripTableFiles[1] = propertyMap.get("result.path") + propertyMap.get( TRIP_MATRIX_AM_FILE_KEY );
+		tripTableFiles[2] = propertyMap.get("result.path") + propertyMap.get( TRIP_MATRIX_MD_FILE_KEY );
+		tripTableFiles[3] = propertyMap.get("result.path") + propertyMap.get( TRIP_MATRIX_PM_FILE_KEY );
+		tripTableFiles[4] = propertyMap.get("result.path") + propertyMap.get( TRIP_MATRIX_EV_FILE_KEY );
 		
 		// number of modes in output tables = autoTripTableNames.length (typically sov,hov2,hov3+,taxi) + empty trips = 4 + 1.
-		int numModeTables = autoTripTableNames.length + 1;
-		cavTripTables = new float[numberOfPeriods][numModeTables*numberOfVotCategories][geogManager.getTazValues().length][geogManager.getTazValues().length];
+		int numModeTables = autoTripTableNames.length;
+		if ( separateCavFiles ) {
+			numModeTables =	numModeTables + 1;
+			cavTripTables = new float[numberOfPeriods][numModeTables*numberOfVotCategories][geogManager.getTazValues().length][geogManager.getTazValues().length];
+		}
 		nonCavTripTables = new float[numberOfPeriods][numModeTables*numberOfVotCategories][geogManager.getTazValues().length][geogManager.getTazValues().length];
 		
 		int[][] periodIntervals = new int[5][2];
@@ -150,7 +146,7 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 		
 		int[] tazValues = geogManager.getTazValues();
 		int[] tazValuesOrder = IndexSort.indexSort( tazValues );
-		int[] extNumbers = new int[tazValues.length+1];
+		int[] extNumbers = new int[tazIndices.length+1];
 		
 		for ( int i=0; i < tazValues.length; i++ ) {
 				int k = tazValuesOrder[i];
@@ -159,22 +155,6 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 		
 		String[] periodLabels = new String[]{ "early", "am", "midday", "pm", "late" };		
 
-		if ( numberOfVotCategories > 1 ) {
-			autoTripTableNamesWithVot = new String[numModeTables*numberOfVotCategories];
-			int count = 0;
-			for (int i = 0; i < numModeTables - 1;i++)
-				for (int j = 1; j<=numberOfVotCategories; j++ )
-					autoTripTableNamesWithVot[count++] = autoTripTableNames[i]+"vot"+j;
-
-			for (int j = 1; j<=numberOfVotCategories; j++ )
-				autoTripTableNamesWithVot[count++] = "empty"+"vot"+j;
-		}
-		else {
-			autoTripTableNamesWithVot = new String[numModeTables];
-			for (int i = 0; i < numModeTables - 1;i++)
-				autoTripTableNamesWithVot[i] = autoTripTableNames[i];
-			autoTripTableNamesWithVot[autoTripTableNames.length] = "empty";
-		}
 
 		int globalLoop = Integer.parseInt(propertyMap.get("global.loop"));
 		
@@ -376,7 +356,10 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 				int period = getTripTablePeriod(CommonProcedures.convertMinutesToInterval(scheduleDepart+depLate-depEarly, constants), periodIntervals); 
 				
 				int emptyCarVotCat = 1;
-				int emptyTripMode= EMPTY_TRIP_MODE;
+				int emptyTripMode= 1;
+				if ( separateCavFiles )
+					emptyTripMode= EMPTY_TRIP_MODE;
+				
 	        	for( int j = 0; j < carAllocationForTrip.length; j ++){
 	        	   	double[] SikForTrip = carLinkingResults[CarAllocation.INDEX_SameTripParkDi][j][i];
 	            	double[] GikForTrip = carLinkingResults[CarAllocation.INDEX_SameTripParkOk][j][i];
@@ -452,9 +435,13 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	
 	            			period = getTripTablePeriod(CommonProcedures.convertMinutesToInterval(departureTime, constants), periodIntervals); 
 	            			
-	            			if(!ifExternalStationsIncluded ||(!ArrayUtils.contains(geogManager.getExternalStations(),geogManager.getMazTazValue(hh.getHomeMaz())) && !ArrayUtils.contains(geogManager.getExternalStations(),geogManager.getMazTazValue(trip.getOrigMaz()))))
-            					cavTripTables[period][(emptyTripMode-1)*numberOfVotCategories+(emptyCarVotCat-1)][tazIndices[geogManager.getMazTazValue(hh.getHomeMaz())]][tazIndices[geogManager.getMazTazValue(trip.getOrigMaz())]] += tripExpansionFactor;
-
+	            			if(!ifExternalStationsIncluded ||(!ArrayUtils.contains(geogManager.getExternalStations(),geogManager.getMazTazValue(hh.getHomeMaz())) && !ArrayUtils.contains(geogManager.getExternalStations(),geogManager.getMazTazValue(trip.getOrigMaz())))) {
+	            				if ( separateCavFiles )
+	            					cavTripTables[period][(emptyTripMode-1)*numberOfVotCategories+(emptyCarVotCat-1)][tazIndices[geogManager.getMazTazValue(hh.getHomeMaz())]][tazIndices[geogManager.getMazTazValue(trip.getOrigMaz())]] += tripExpansionFactor;
+	            				else
+	            					nonCavTripTables[period][(emptyTripMode-1)*numberOfVotCategories+(emptyCarVotCat-1)][tazIndices[geogManager.getMazTazValue(hh.getHomeMaz())]][tazIndices[geogManager.getMazTazValue(trip.getOrigMaz())]] += tripExpansionFactor;
+	            			}
+	            			
 	        			}
 	            		//Add actual person trip
 	            		tripDistanceFromHome = distanceFromHome[geogManager.getMazTazValue(trip.getDestMaz())];
@@ -501,8 +488,8 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
                 period = getTripTablePeriod(CommonProcedures.convertMinutesToInterval(scheduleDepart+depLate-depEarly, constants), periodIntervals); 
 	        			//logger.info(tripMode + " " + votCat + " " + period + " " + origTaz + " " + destTaz);
 	        			if(!ifExternalStationsIncluded ||(!ArrayUtils.contains(geogManager.getExternalStations(),origTaz) && !ArrayUtils.contains(geogManager.getExternalStations(),destTaz))) {
-	        				if(ifAvHh == 1)
-            				cavTripTables[period][(tripMode-1)*numberOfVotCategories+(votCat-1)][tazIndices[geogManager.getMazTazValue(hh.getHomeMaz())]][tazIndices[geogManager.getMazTazValue(trip.getOrigMaz())]] += tripExpansionFactor;
+	        				if(ifAvHh == 1 && separateCavFiles)
+	        					cavTripTables[period][(tripMode-1)*numberOfVotCategories+(votCat-1)][tazIndices[geogManager.getMazTazValue(hh.getHomeMaz())]][tazIndices[geogManager.getMazTazValue(trip.getOrigMaz())]] += tripExpansionFactor;
 	        				else
 	        					nonCavTripTables[period][(tripMode-1)*numberOfVotCategories+(votCat-1)][tazIndices[origTaz]][tazIndices[destTaz]] += tripExpansionFactor;
 	        			}
@@ -566,8 +553,12 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	                			}
 
 	                			period = getTripTablePeriod(CommonProcedures.convertMinutesToInterval(departureTime, constants), periodIntervals); 
-	                			if(!ifExternalStationsIncluded ||(!ArrayUtils.contains(geogManager.getExternalStations(),origTaz) && !ArrayUtils.contains(geogManager.getExternalStations(),nextOrigTaz)))
-                					cavTripTables[period][(emptyTripMode-1)*numberOfVotCategories+(emptyCarVotCat-1)][tazIndices[origTaz]][tazIndices[nextOrigTaz]] += tripExpansionFactor;
+	                			if(!ifExternalStationsIncluded ||(!ArrayUtils.contains(geogManager.getExternalStations(),origTaz) && !ArrayUtils.contains(geogManager.getExternalStations(),nextOrigTaz))) {
+	                				if ( separateCavFiles )
+	                					cavTripTables[period][(emptyTripMode-1)*numberOfVotCategories+(emptyCarVotCat-1)][tazIndices[origTaz]][tazIndices[nextOrigTaz]] += tripExpansionFactor;
+	                				else
+	                					nonCavTripTables[period][(emptyTripMode-1)*numberOfVotCategories+(emptyCarVotCat-1)][tazIndices[origTaz]][tazIndices[nextOrigTaz]] += tripExpansionFactor;
+	                			}
 	                			
 	                			break;
 	        				}
@@ -618,9 +609,12 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 
 
 	                			period = getTripTablePeriod(CommonProcedures.convertMinutesToInterval(departureTime, constants), periodIntervals); 
-	                			if(!ifExternalStationsIncluded ||(!ArrayUtils.contains(geogManager.getExternalStations(),geogManager.getMazTazValue(trip.getDestMaz())) && !ArrayUtils.contains(geogManager.getExternalStations(),geogManager.getMazTazValue(hh.getHomeMaz()))))
-                    				cavTripTables[period][(emptyTripMode-1)*numberOfVotCategories+(emptyCarVotCat-1)][tazIndices[geogManager.getMazTazValue(trip.getDestMaz())]][tazIndices[geogManager.getMazTazValue(hh.getHomeMaz())]] += tripExpansionFactor;
-
+	                			if(!ifExternalStationsIncluded ||(!ArrayUtils.contains(geogManager.getExternalStations(),geogManager.getMazTazValue(trip.getDestMaz())) && !ArrayUtils.contains(geogManager.getExternalStations(),geogManager.getMazTazValue(hh.getHomeMaz())))) {
+	                				if ( separateCavFiles )
+	                					cavTripTables[period][(emptyTripMode-1)*numberOfVotCategories+(emptyCarVotCat-1)][tazIndices[geogManager.getMazTazValue(trip.getDestMaz())]][tazIndices[geogManager.getMazTazValue(hh.getHomeMaz())]] += tripExpansionFactor;
+	                				else
+	                					nonCavTripTables[period][(emptyTripMode-1)*numberOfVotCategories+(emptyCarVotCat-1)][tazIndices[geogManager.getMazTazValue(trip.getDestMaz())]][tazIndices[geogManager.getMazTazValue(hh.getHomeMaz())]] += tripExpansionFactor;
+	                			}
 
 	                			autoRecordDistance =distanceFromHome[nextOrigTaz];
 	                			departureTime = (nextTrip.getSchedDepart() +  nextDepLate - nextDepEarly) - Float.parseFloat(propertyMap.get("minutes.per.mile"))*autoRecordDistance;
@@ -667,11 +661,15 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	                    				totalAutoNonAVTrips++;                			
 	                    			}
 
-                            period = getTripTablePeriod(CommonProcedures.convertMinutesToInterval(departureTime, constants), periodIntervals); 
+	                    			period = getTripTablePeriod(CommonProcedures.convertMinutesToInterval(departureTime, constants), periodIntervals); 
 
-	                    			if(!ifExternalStationsIncluded ||(!ArrayUtils.contains(geogManager.getExternalStations(),geogManager.getMazTazValue(hh.getHomeMaz())) && !ArrayUtils.contains(geogManager.getExternalStations(),geogManager.getMazTazValue(nextTrip.getOrigMaz()))))
-                    					cavTripTables[period][(emptyTripMode-1)*numberOfVotCategories+(emptyCarVotCat-1)][tazIndices[geogManager.getMazTazValue(hh.getHomeMaz())]][tazIndices[geogManager.getMazTazValue(nextTrip.getOrigMaz())]] += tripExpansionFactor;
-
+	                    			if(!ifExternalStationsIncluded ||(!ArrayUtils.contains(geogManager.getExternalStations(),geogManager.getMazTazValue(hh.getHomeMaz())) && !ArrayUtils.contains(geogManager.getExternalStations(),geogManager.getMazTazValue(nextTrip.getOrigMaz())))) {
+		                				if ( separateCavFiles )
+		                					cavTripTables[period][(emptyTripMode-1)*numberOfVotCategories+(emptyCarVotCat-1)][tazIndices[geogManager.getMazTazValue(hh.getHomeMaz())]][tazIndices[geogManager.getMazTazValue(nextTrip.getOrigMaz())]] += tripExpansionFactor;
+		                				else
+		                					nonCavTripTables[period][(emptyTripMode-1)*numberOfVotCategories+(emptyCarVotCat-1)][tazIndices[geogManager.getMazTazValue(hh.getHomeMaz())]][tazIndices[geogManager.getMazTazValue(nextTrip.getOrigMaz())]] += tripExpansionFactor;
+	                    			}
+	                    			
 	                    			break;
 	                			}
 	        				
@@ -725,13 +723,18 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 
 
 
-                    period = getTripTablePeriod(CommonProcedures.convertMinutesToInterval(departureTime, constants), periodIntervals); 
-
-                    if(!ifExternalStationsIncluded ||(!ArrayUtils.contains(geogManager.getExternalStations(),geogManager.getMazTazValue(trip.getDestMaz())) && !ArrayUtils.contains(geogManager.getExternalStations(),geogManager.getMazTazValue(hh.getHomeMaz()))))
-                      cavTripTables[period][(emptyTripMode-1)*numberOfVotCategories+(emptyCarVotCat-1)][tazIndices[geogManager.getMazTazValue(trip.getDestMaz())]][tazIndices[geogManager.getMazTazValue(hh.getHomeMaz())]] += tripExpansionFactor;
-
-	            			break;
-	        			}
+		                    period = getTripTablePeriod(CommonProcedures.convertMinutesToInterval(departureTime, constants), periodIntervals); 
+		
+		                    if(!ifExternalStationsIncluded ||(!ArrayUtils.contains(geogManager.getExternalStations(),geogManager.getMazTazValue(trip.getDestMaz())) && !ArrayUtils.contains(geogManager.getExternalStations(),geogManager.getMazTazValue(hh.getHomeMaz())))) {
+		        				if ( separateCavFiles )
+		        					cavTripTables[period][(emptyTripMode-1)*numberOfVotCategories+(emptyCarVotCat-1)][tazIndices[geogManager.getMazTazValue(trip.getDestMaz())]][tazIndices[geogManager.getMazTazValue(hh.getHomeMaz())]] += tripExpansionFactor;
+		        				else
+		        					nonCavTripTables[period][(emptyTripMode-1)*numberOfVotCategories+(emptyCarVotCat-1)][tazIndices[geogManager.getMazTazValue(trip.getDestMaz())]][tazIndices[geogManager.getMazTazValue(hh.getHomeMaz())]] += tripExpansionFactor;
+		                    }
+		                    
+			        		break;
+			        	}
+			        	
 	        		}
 	        		            		
 	        	}
@@ -770,12 +773,14 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	    			//add them as taxi
 
 
-            period = getTripTablePeriod(CommonProcedures.convertMinutesToInterval(trip.getSchedDepart()+depLate-depEarly, constants), periodIntervals); 
-            if(!ifExternalStationsIncluded ||(!ArrayUtils.contains(geogManager.getExternalStations(),origTaz) && !ArrayUtils.contains(geogManager.getExternalStations(),destTaz)))
-	    				if(ifAvHh == 1)
+		            period = getTripTablePeriod(CommonProcedures.convertMinutesToInterval(trip.getSchedDepart()+depLate-depEarly, constants), periodIntervals); 
+		            if(!ifExternalStationsIncluded ||(!ArrayUtils.contains(geogManager.getExternalStations(),origTaz) && !ArrayUtils.contains(geogManager.getExternalStations(),destTaz))) {
+	    				if( ifAvHh == 1 && separateCavFiles )
 	        				cavTripTables[period][(4-1)*numberOfVotCategories+(votCat-1)][tazIndices[geogManager.getMazTazValue(trip.getDestMaz())]][tazIndices[geogManager.getMazTazValue(hh.getHomeMaz())]] += tripExpansionFactor;
 	    				else
 	    					nonCavTripTables[period][(4-1)*numberOfVotCategories+(votCat-1)][tazIndices[geogManager.getMazTazValue(trip.getOrigMaz())]][tazIndices[geogManager.getMazTazValue(trip.getDestMaz())]] += tripExpansionFactor;
+		            }
+		            
 	        	}
 	      	}
 	        int hhUnusedCar = 0;
@@ -848,98 +853,142 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	    logger.info(String.format( "%-60s","Total Unused AV Cars = ") + String.format("%,15d",totalUsedAVCars));
 
 
+	    int offset = 0;
+	    if ( separateCavFiles )
+	    	offset = numModeTables*numberOfVotCategories;
+	    
 	    for ( int i=0; i < periodLabels.length; i++ ) {
 
 			Matrix[] matrices = new Matrix[numModeTables*numberOfVotCategories];
-	    	
+			String[] tripTableNames = new String[numModeTables*numberOfVotCategories];
+			if ( separateCavFiles ) {
+				matrices = new Matrix[numModeTables*numberOfVotCategories*2];
+				tripTableNames = new String[numModeTables*numberOfVotCategories*2];
+			}
+			
   			if ( numberOfVotCategories > 1 ) {
   			
-    			for ( int j=0; j < numModeTables-1; j++ ) {
-    				for (int v = 0; v<numberOfVotCategories; v++){
-    					String description = periodLabels[i] + " period C/AV " + autoTripTableNames[j] + " trips by vot segment " + String.valueOf(v) ;
-    					float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, cavTripTables[i][(j)*numberOfVotCategories+v],tazIndices );
-    					matrices[j*numberOfVotCategories+v] = new Matrix( autoTripTableNames[j]+"vot" + String.valueOf(v), description, orderedTable );
-    					matrices[j*numberOfVotCategories+v].setExternalNumbers( extNumbers );
-    				}
-    			}
-    
-    			for (int v = 0; v<numberOfVotCategories; v++){
-    				String description = periodLabels[i] + " period C/AV empty trips by vot segment " + String.valueOf(v) ;
-    				float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, cavTripTables[i][(numModeTables-1)*numberOfVotCategories+v],tazIndices );
-    				matrices[(numModeTables-1)*numberOfVotCategories+v] = new Matrix( "empty"+"vot" + String.valueOf(v), description, orderedTable );
-    				matrices[(numModeTables-1)*numberOfVotCategories+v].setExternalNumbers( extNumbers );
-    			}
+  				// if separateCavFiles, write empty table after mode tables
+  				if ( separateCavFiles ) {
+  	    			for ( int j=0; j < numModeTables-1; j++ ) {
+  	    				for (int v = 0; v<numberOfVotCategories; v++){
+  	    					int matrixIndex = j*numberOfVotCategories + v;
+  	    					String description = periodLabels[i] + " period C/AV " + autoTripTableNames[j] + " trips by vot segment " + String.valueOf(v) ;
+  	    					float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, cavTripTables[i][(j)*numberOfVotCategories+v],tazIndices );
+  	    					tripTableNames[matrixIndex] = autoTripTableNames[j]+"_cav"+"_vot" + String.valueOf(v);
+  	    					matrices[matrixIndex] = new Matrix( tripTableNames[matrixIndex], description, orderedTable );
+  	    					matrices[matrixIndex].setExternalNumbers( extNumbers );
+  	    				}
+  	    			}
+  	    			for (int v = 0; v<numberOfVotCategories; v++){
+  	    				int matrixIndex = (numModeTables-1)*numberOfVotCategories + v;
+  	    				String description = periodLabels[i] + " period C/AV empty trips by vot segment " + String.valueOf(v) ;
+  	    				float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, cavTripTables[i][(numModeTables-1)*numberOfVotCategories+v],tazIndices );
+  						tripTableNames[matrixIndex] = "empty_cav_vot" + String.valueOf(v);
+  	    				matrices[matrixIndex] = new Matrix( tripTableNames[matrixIndex], description, orderedTable );
+  	    				matrices[matrixIndex].setExternalNumbers( extNumbers );
+  	    			}
+  				}
+  				else {
+  	    			for ( int j=0; j < numModeTables; j++ ) {
+  	    				for (int v = 0; v<numberOfVotCategories; v++){
+  	    					int matrixIndex = j*numberOfVotCategories + v;
+  	    					String description = periodLabels[i] + " period C/AV " + autoTripTableNames[j] + " trips by vot segment " + String.valueOf(v) ;
+  	    					float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, cavTripTables[i][(j)*numberOfVotCategories+v],tazIndices );
+  	    					tripTableNames[matrixIndex] = autoTripTableNames[j]+"_cav"+"_vot" + String.valueOf(v);
+  	    					matrices[matrixIndex] = new Matrix( tripTableNames[matrixIndex], description, orderedTable );
+  	    					matrices[matrixIndex].setExternalNumbers( extNumbers );
+  	    				}
+  	    			}
+  				}
 
+    			
+    			
+  				if ( separateCavFiles ) {
+  	  				for ( int j=0; j < numModeTables-1; j++ ) {
+  	    				for (int v = 0; v<numberOfVotCategories; v++){
+  	    					int matrixIndex = j*numberOfVotCategories + v;
+  	    					String description = periodLabels[i] + " period non-C/AV " + autoTripTableNames[j] + " trips by vot segment " + String.valueOf(v) ;
+  	    					float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][(j)*numberOfVotCategories+v],tazIndices );
+  	    					tripTableNames[matrixIndex] = autoTripTableNames[j]+"_vot" + String.valueOf(v);
+  	    					matrices[matrixIndex] = new Matrix( tripTableNames[matrixIndex], description, orderedTable );
+  	    					matrices[matrixIndex].setExternalNumbers( extNumbers );
+  	    				}
+  	    			}  	    
+  	    			for (int v = 0; v<numberOfVotCategories; v++){
+  	    				int matrixIndex = (numModeTables-1)*numberOfVotCategories + v;
+  	    				String description = periodLabels[i] + " period non-C/AV empty trips by vot segment " + String.valueOf(v) ;
+  	    				float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][(numModeTables-1)*numberOfVotCategories+v],tazIndices );
+  						tripTableNames[matrixIndex] = "empty_vot" + String.valueOf(v);
+  	    				matrices[matrixIndex] = new Matrix( tripTableNames[matrixIndex], description, orderedTable );
+  	    				matrices[matrixIndex].setExternalNumbers( extNumbers );
+  	    			}
+  				}
+  				else {
+  	  				for ( int j=0; j < numModeTables; j++ ) {
+  	    				for (int v = 0; v<numberOfVotCategories; v++){
+  	    					int matrixIndex = j*numberOfVotCategories + v;
+  	    					String description = periodLabels[i] + " period " + autoTripTableNames[j] + " trips by vot segment " + String.valueOf(v) ;
+  	    					float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][(j)*numberOfVotCategories+v],tazIndices );
+  	    					tripTableNames[matrixIndex] = autoTripTableNames[j]+"_vot" + String.valueOf(v);
+  	    					matrices[matrixIndex] = new Matrix( tripTableNames[matrixIndex], description, orderedTable );
+  	    					matrices[matrixIndex].setExternalNumbers( extNumbers );
+  	    				}
+  	    			}  	    
+  				}
+    			
   			}
   			else {
   			  
-    			for ( int j=0; j < numModeTables-1; j++ ) {
-  					String description = periodLabels[i] + " period C/AV " + autoTripTableNames[j] + " trips";
-  					float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, cavTripTables[i][j],tazIndices );
-  					matrices[j] = new Matrix( autoTripTableNames[j], description, orderedTable );
-  					matrices[j].setExternalNumbers( extNumbers );
-    			}
-    
-  				String description = periodLabels[i] + " period C/AV empty trips";
-  				float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, cavTripTables[i][(numModeTables-1)],tazIndices );
-  				matrices[(numModeTables-1)] = new Matrix( "empty", description, orderedTable );
-  				matrices[(numModeTables-1)].setExternalNumbers( extNumbers );
+  				if ( separateCavFiles ) {
+  					
+  	    			for ( int j=0; j < numModeTables-1; j++ ) {
+  	  					String description = periodLabels[i] + " period C/AV " + autoTripTableNames[j] + " trips";
+  	  					float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, cavTripTables[i][j],tazIndices );
+  						tripTableNames[j] = autoTripTableNames[j]+"_cav";
+  	  					matrices[j] = new Matrix( tripTableNames[j], description, orderedTable );
+  	  					matrices[j].setExternalNumbers( extNumbers );
+  	    			}
+  	    
+  	  				String description = periodLabels[i] + " period C/AV empty trips";
+  	  				float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, cavTripTables[i][(numModeTables-1)],tazIndices );
+  					tripTableNames[(numModeTables-1)] = "empty_cav";
+  	  				matrices[(numModeTables-1)] = new Matrix( tripTableNames[(numModeTables-1)], description, orderedTable );
+  	  				matrices[(numModeTables-1)].setExternalNumbers( extNumbers );
+  	  				
+  	    			for ( int j=0; j < numModeTables-1; j++ ) {
+  	  					description = periodLabels[i] + " period non-C/AV " + autoTripTableNames[j] + " trips";
+  	  					orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][j],tazIndices );
+  						tripTableNames[j+offset] = autoTripTableNames[j];
+  	  					matrices[j+offset] = new Matrix( tripTableNames[j+offset], description, orderedTable );
+  	  					matrices[j+offset].setExternalNumbers( extNumbers );
+  	    			}
+  	    
+  	  				description = periodLabels[i] + " period non-C/AV empty trips";
+  	  				orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][(numModeTables-1)],tazIndices );
+  	  				tripTableNames[(numModeTables-1)+offset] = "empty";
+  	  				matrices[(numModeTables-1)+offset] = new Matrix( tripTableNames[(numModeTables-1)+offset], description, orderedTable );
+  	  				matrices[(numModeTables-1)+offset].setExternalNumbers( extNumbers );
 
+  				}
+  				else {
+  					
+  	    			for ( int j=0; j < numModeTables; j++ ) {
+  	  					String description = periodLabels[i] + " period " + autoTripTableNames[j] + " trips";
+  	  					float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][j],tazIndices );
+  						tripTableNames[j] = autoTripTableNames[j];
+  	  					matrices[j] = new Matrix( tripTableNames[j], description, orderedTable );
+  	  					matrices[j].setExternalNumbers( extNumbers );
+  	    			}
+  	    
+  				}
+  				
   			}
 			
   			
-  			matrixHandler.writeMatrixFile( cavTripTableFiles[i], matrices, autoTripTableNamesWithVot, matrixType );
+  			matrixHandler.writeMatrixFile( tripTableFiles[i], matrices, tripTableNames, matrixType );
 			    	
 	    }
-	
-	
-	
-	
-	
-	    for ( int i=0; i < periodLabels.length; i++ ) {
-
-			Matrix[] matrices = new Matrix[numModeTables*numberOfVotCategories];
-	    	
-  			if ( numberOfVotCategories > 1 ) {
-  			
-    			for ( int j=0; j < numModeTables-1; j++ ) {
-    				for (int v = 0; v<numberOfVotCategories; v++){
-    					String description = periodLabels[i] + " period non-C/AV " + autoTripTableNames[j] + " trips by vot segment " + String.valueOf(v) ;
-    					float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][(j)*numberOfVotCategories+v],tazIndices );
-    					matrices[j*numberOfVotCategories+v] = new Matrix( autoTripTableNames[j]+"vot" + String.valueOf(v), description, orderedTable );
-    					matrices[j*numberOfVotCategories+v].setExternalNumbers( extNumbers );
-    				}
-    			}
-    
-    			for (int v = 0; v<numberOfVotCategories; v++){
-    				String description = periodLabels[i] + " period non-C/AV empty trips by vot segment " + String.valueOf(v) ;
-    				float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][(numModeTables-1)*numberOfVotCategories+v],tazIndices );
-    				matrices[(numModeTables-1)*numberOfVotCategories+v] = new Matrix( "empty"+"vot" + String.valueOf(v), description, orderedTable );
-    				matrices[(numModeTables-1)*numberOfVotCategories+v].setExternalNumbers( extNumbers );
-    			}
-
-  			}
-  			else {
-  			  
-    			for ( int j=0; j < numModeTables-1; j++ ) {
-  					String description = periodLabels[i] + " period non-C/AV " + autoTripTableNames[j] + " trips";
-  					float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][j],tazIndices );
-  					matrices[j] = new Matrix( autoTripTableNames[j], description, orderedTable );
-  					matrices[j].setExternalNumbers( extNumbers );
-    			}
-    
-  				String description = periodLabels[i] + " period non-C/AV empty trips";
-  				float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][(numModeTables-1)],tazIndices );
-  				matrices[(numModeTables-1)] = new Matrix( "empty", description, orderedTable );
-  				matrices[(numModeTables-1)].setExternalNumbers( extNumbers );
-
-  			}
-			
-  			
-  			matrixHandler.writeMatrixFile( nonCavTripTableFiles[i], matrices, autoTripTableNamesWithVot, matrixType );
-			    	
-	    }
-	
 	
 	}
 
@@ -961,13 +1010,6 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 		}	            		
 		return votCat;
   }
-
-	
-	private String insertBeforeExtension( String filename, String insertString ) {	
-  	int dotIndex = filename.indexOf(".");
-  	String extension = filename.substring(dotIndex);
-  	return filename.substring(0, dotIndex) + insertString + "." + extension;
-	}
 
 }
 

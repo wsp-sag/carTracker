@@ -29,6 +29,9 @@ import fileProcessing.GlobalProperties;
 import fileProcessing.ParameterReader;
 import objectMapping.HhObjectMapper;
 import objects.HouseholdCarAllocation;
+import utility.ConstantsIf;
+import utility.ConstantsMag;
+import utility.ConstantsOhio;
 import utility.ParallelHelper;
 
 
@@ -43,11 +46,11 @@ public class CarAllocatorMain {
     		logger = Logger.getLogger( CarAllocatorMain.class );
 
         HashMap<String, String> propertyMap = ResourceUtil.changeResourceBundleIntoHashMap(rb);
-        String parametersFile = rb.getString( GlobalProperties.PARAMETER_FILE_KEY.toString() );       
+        String parametersFile = propertyMap.get( GlobalProperties.PARAMETER_FILE_KEY.toString() );       
 
         int debugHhId = -1;
         try {
-            debugHhId = Integer.valueOf( rb.getString( GlobalProperties.HHID_LOG_REPORT_KEY.toString() ) );
+            debugHhId = Integer.valueOf( propertyMap.get( GlobalProperties.HHID_LOG_REPORT_KEY.toString() ) );
         }
         catch( MissingResourceException e ) {         
         }
@@ -69,16 +72,27 @@ public class CarAllocatorMain {
         //if ( debugHhId >= 0 )
         //    debugCarAllocation_v2( propertyMap, logger, parametersFile, debugHhId, startOfDayMinute );       
         
+        // get the region property.  this is set for Ohio3C and not set for MAG.
+        // Use it to distinguish which implementation to use.
+        ConstantsIf constants = null;
+        WriteCarAllocationOutputFilesIf writer = null; 
+        String mpoRegion = propertyMap.get( WriteCarAllocationOutputFilesIf.MODEL_REGION_PROPERTY );
+        if ( mpoRegion == null ) {
+	        constants = new ConstantsMag();
+	        writer = new WriteCarAllocationOutputFilesMag();
+        }
+        else {
+        	constants = new ConstantsOhio();
+        	writer = new WriteCarAllocationOutputFilesOhio(); 
+        }
         
-        WriteCarAllocationOutputFilesIf writer = new WriteCarAllocationOutputFilesOhio(); 
         SharedDistanceMatrixData sharedDistanceObject = SharedDistanceMatrixData.getInstance(propertyMap, geogManager);
         String outputProbCarChangeFileName = propertyMap.get("output.hh.car.change.prob.file")+"_"+propertyMap.get("scenario.suffix.name")+".csv";
         writer.writeCarAllocationOutputFile(logger, propertyMap, 
         	propertyMap.get("output.trip.file")+"_"+propertyMap.get("scenario.suffix.name")+".csv",
         	propertyMap.get("output.car.use.file")+"_"+propertyMap.get("scenario.suffix.name")+".csv",
-        	outputProbCarChangeFileName, carAllocationResults, geogManager, sharedDistanceObject, socec);
-        
-        
+        	outputProbCarChangeFileName, carAllocationResults, geogManager, sharedDistanceObject, socec, constants);
+                
         return null;
     }   
     
@@ -184,99 +198,99 @@ public class CarAllocatorMain {
 	
 
 
-private List<HouseholdCarAllocation> runCarAllocation_v2_mono( HashMap<String, String> propertyMap, Logger logger, ParameterReader parameterInstance, 
-		GeographyManager geogManager, SocioEconomicDataManager socec) {
-
-	
-	int minHhId = Integer.valueOf( propertyMap.get( GlobalProperties.MIN_ABM_HH_ID_KEY.toString() ) );
-	int maxHhId = Integer.valueOf( propertyMap.get( GlobalProperties.MAX_ABM_HH_ID_KEY.toString() ) );
+	private List<HouseholdCarAllocation> runCarAllocation_v2_mono( HashMap<String, String> propertyMap, Logger logger, ParameterReader parameterInstance, 
+			GeographyManager geogManager, SocioEconomicDataManager socec) {
 	
 		
-	logger.info( System.getProperty("java.library.path"));
-    CarAllocation carAllocation = new CarAllocation( parameterInstance, propertyMap, socec, geogManager );
-    
-    logger.info( "reading ABM data files ..." );
-    AbmDataStore abmDataStore = new AbmDataStore( propertyMap );
-    
-    minHhId = minHhId >= 0 ? minHhId : abmDataStore.getMinHhId();
-	maxHhId = maxHhId >= 0 ? maxHhId : abmDataStore.getMaxHhId();
-
+		int minHhId = Integer.valueOf( propertyMap.get( GlobalProperties.MIN_ABM_HH_ID_KEY.toString() ) );
+		int maxHhId = Integer.valueOf( propertyMap.get( GlobalProperties.MAX_ABM_HH_ID_KEY.toString() ) );
+		
+			
+		logger.info( System.getProperty("java.library.path"));
+	    CarAllocation carAllocation = new CarAllocation( parameterInstance, propertyMap, socec, geogManager );
+	    
+	    logger.info( "reading ABM data files ..." );
+	    AbmDataStore abmDataStore = new AbmDataStore( propertyMap );
+	    
+	    minHhId = minHhId >= 0 ? minHhId : abmDataStore.getMinHhId();
+		maxHhId = maxHhId >= 0 ? maxHhId : abmDataStore.getMaxHhId();
 	
-    abmDataStore.populateDataStore( minHhId, maxHhId+1 );
-    
-    Map<Long, Double> minActDurMap = null;
-    
-    logger.info( "starting Car Allocation procedure ..." );
-    HhObjectMapper hhObjectMapper = new HhObjectMapper( propertyMap, abmDataStore, null, null, minActDurMap );
-    HhCarAllocator carAllocator = new HhCarAllocator( propertyMap,carAllocation, abmDataStore, null,  logger );
-    List<HouseholdCarAllocation> carAllocationResults =
-    	Arrays.stream( abmDataStore.getHhIdArrayInRange( minHhId, maxHhId+1 ) )
-			  .filter( x -> abmDataStore.getTripRecords(x) != null ) 
-			  .filter( x -> abmDataStore.getNumAutoTripRecords(x).size() >0 )
-    		  .mapToObj( hhid -> hhObjectMapper.createHouseholdObjectFromFiles(propertyMap,hhid, null, false) )	    		    
-  		      .map( carAllocator::getCarAllocationWithSchedulesForHh )
-    		  .collect( Collectors.toList() );
-		 
-    /*
-    List<List<HouseholdCarAllocation>> lpFailedList = new ArrayList<>();
-   	for ( int i=0; i < carAllocator.MAX_ITERATIONS; i++ )
-   		lpFailedList.add( new ArrayList<>() );
-    
-		for ( HouseholdCarAllocation hhAdj : carAllocationResults )
-			if ( hhAdj.getOptimalSolutionIterations() > 0 )
-				lpFailedList.get( hhAdj.getOptimalSolutionIterations()-1 ).add( hhAdj );
-
-   	for ( int i=0; i < HhSchedAdjuster.MAX_ITERATIONS; i++ )
-   		lpFailedList.get(i).sort( (v1, v2) -> v1.getHousehold().getNumIndivTripRecords() - v2.getHousehold().getNumIndivTripRecords() < 0.0 ? -1 : v1.getHousehold().getNumIndivTripRecords() - v2.getHousehold().getNumIndivTripRecords() > 0.0 ? 1 : 0 );
-   	
-   	for ( int i=0; i < HhSchedAdjuster.MAX_ITERATIONS; i++ )
-   		logger.info( "number of LP failures for end hour: " + HhSchedAdjuster.MAX_SIMULATION_HOURS[i] + " = " + lpFailedList.get(i).size() + "." );
-    logger.info( "schedule adjustment finished." );
-    
-    */
-    return carAllocationResults;
-    
-}
-
-
-
-public static void main( String[] args ) {
-
-	long start = System.currentTimeMillis();
+		
+	    abmDataStore.populateDataStore( minHhId, maxHhId+1 );
+	    
+	    Map<Long, Double> minActDurMap = null;
+	    
+	    logger.info( "starting Car Allocation procedure ..." );
+	    HhObjectMapper hhObjectMapper = new HhObjectMapper( propertyMap, abmDataStore, null, null, minActDurMap );
+	    HhCarAllocator carAllocator = new HhCarAllocator( propertyMap,carAllocation, abmDataStore, null,  logger );
+	    List<HouseholdCarAllocation> carAllocationResults =
+	    	Arrays.stream( abmDataStore.getHhIdArrayInRange( minHhId, maxHhId+1 ) )
+				  .filter( x -> abmDataStore.getTripRecords(x) != null ) 
+				  .filter( x -> abmDataStore.getNumAutoTripRecords(x).size() >0 )
+	    		  .mapToObj( hhid -> hhObjectMapper.createHouseholdObjectFromFiles(propertyMap,hhid, null, false) )	    		    
+	  		      .map( carAllocator::getCarAllocationWithSchedulesForHh )
+	    		  .collect( Collectors.toList() );
+			 
+	    /*
+	    List<List<HouseholdCarAllocation>> lpFailedList = new ArrayList<>();
+	   	for ( int i=0; i < carAllocator.MAX_ITERATIONS; i++ )
+	   		lpFailedList.add( new ArrayList<>() );
+	    
+			for ( HouseholdCarAllocation hhAdj : carAllocationResults )
+				if ( hhAdj.getOptimalSolutionIterations() > 0 )
+					lpFailedList.get( hhAdj.getOptimalSolutionIterations()-1 ).add( hhAdj );
 	
-    CarAllocatorMain mainObj = new CarAllocatorMain();
-
-	System.out.println ( "CarTracker_Ohio, 06Apr2020-v1, starting." );
-    
-	ResourceBundle rb = null;
-	if ( args.length >=0 ) {
-		rb = ResourceBundle.getBundle( args[0] );			
-		if ( args.length > 1 ) 
-			runDistributed = Boolean.parseBoolean( args[1] );
+	   	for ( int i=0; i < HhSchedAdjuster.MAX_ITERATIONS; i++ )
+	   		lpFailedList.get(i).sort( (v1, v2) -> v1.getHousehold().getNumIndivTripRecords() - v2.getHousehold().getNumIndivTripRecords() < 0.0 ? -1 : v1.getHousehold().getNumIndivTripRecords() - v2.getHousehold().getNumIndivTripRecords() > 0.0 ? 1 : 0 );
+	   	
+	   	for ( int i=0; i < HhSchedAdjuster.MAX_ITERATIONS; i++ )
+	   		logger.info( "number of LP failures for end hour: " + HhSchedAdjuster.MAX_SIMULATION_HOURS[i] + " = " + lpFailedList.get(i).size() + "." );
+	    logger.info( "schedule adjustment finished." );
+	    
+	    */
+	    return carAllocationResults;
+	    
 	}
-	else {
-		System.out.println( "\ninvalid number of command line arguments - 1 expected." );
-		System.out.println( "\t 1) String argument with the name of the properties file (without the .properties extension)." );
-		System.exit(-1);
+
+
+
+	public static void main( String[] args ) {
+	
+		long start = System.currentTimeMillis();
+		
+	    CarAllocatorMain mainObj = new CarAllocatorMain();
+	
+		System.out.println ( "CarTracker, 24Apr2020, v1.03, starting." );
+	    
+		ResourceBundle rb = null;
+		if ( args.length >=0 ) {
+			rb = ResourceBundle.getBundle( args[0] );			
+			if ( args.length > 1 ) 
+				runDistributed = Boolean.parseBoolean( args[1] );
+		}
+		else {
+			System.out.println( "\ninvalid number of command line arguments - 1 expected." );
+			System.out.println( "\t 1) String argument with the name of the properties file (without the .properties extension)." );
+			System.exit(-1);
+		}
+		
+		// set up geography manager
+		HashMap<String,String> propertyMap = ResourceUtil.changeResourceBundleIntoHashMap(rb);
+		GeographyManager geogManager = GeographyManager.getInstance();
+	    geogManager.setupGeographyManager(propertyMap);
+	    
+	    // set up socio economic data manager
+	    SocioEconomicDataManager socec = SocioEconomicDataManager.getInstance();
+	    socec.loadDataFromCsvFile(propertyMap.get("socec.data.file.name"), propertyMap.get("socec.data.maz.field"));
+	    
+	
+		mainObj.runCarAllocator( rb, null, geogManager, socec );
+		
+		System.out.println ( "Car Tracker finished in " + (int)((System.currentTimeMillis() - start)/1000.0) + " seconds." );
+	    System.out.println ( "\n" );
+	
+	    System.exit(0);
 	}
-	
-	// set up geography manager
-	HashMap<String,String> propertyMap = ResourceUtil.changeResourceBundleIntoHashMap(rb);
-	GeographyManager geogManager = GeographyManager.getInstance();
-    geogManager.setupGeographyManager(propertyMap);
-    
-    // set up socio economic data manager
-    SocioEconomicDataManager socec = SocioEconomicDataManager.getInstance();
-    socec.loadDataFromCsvFile(rb.getString("socec.data.file.name"), rb.getString("socec.data.maz.field"));
-    
-
-	mainObj.runCarAllocator( rb, null, geogManager, socec );
-	
-	System.out.println ( "Car Tracker finished in " + (int)((System.currentTimeMillis() - start)/1000.0) + " seconds." );
-    System.out.println ( "\n" );
-
-    System.exit(0);
-}
 
 
 }
