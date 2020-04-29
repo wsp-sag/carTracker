@@ -84,6 +84,24 @@ public interface WriteCarAllocationOutputFilesIf {
     }
 
 
+    default float[][] getTripTableOrderedByExternalTazIndices( int[] externalTazOrder, float[][] tripTable, int[] tazIndices ) {
+    	
+    	float[][] orderedTripTable = new float[tazIndices.length][tazIndices.length];
+    	for ( int i=0; i < tazIndices.length; i++ ) {
+    		if(tazIndices[i]>=0){
+    			int k = externalTazOrder[tazIndices[i]];
+    			for ( int j=0; j < tazIndices.length; j++ ) {
+    				if(tazIndices[j]>=0){
+    				int m = externalTazOrder[tazIndices[j]];
+    				orderedTripTable[i-1][j-1] = tripTable[k][m]; 
+    				}
+    			}
+    		}
+    	}    	
+    	return orderedTripTable;
+    }
+
+
     default double[] getProbabilityOfChangingCarOwnership(String probFileName,String hhidName,String probField) {    	
     	
     	int[] hidWoSampleValues = Parsing.getIntArrayFromCsvFile( probFileName, hhidName );

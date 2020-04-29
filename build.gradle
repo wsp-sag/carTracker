@@ -2,7 +2,7 @@ apply plugin: 'java'
  
 jar {
     baseName = 'carTracker'
-    version =  '24Apr2020_v1.03'
+    version =  '28Apr2020_v1.08'
 }
  
 repositories {
