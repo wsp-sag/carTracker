@@ -452,11 +452,11 @@ public class CarAllocation
 	        		if(nextAo == 0)
 	        			parkCostGik = 0;
 
-	        		// set repositioning cost to very high value if non-AV hh and not starting in the same taz
+	        		// set repositioning cost to very high value if non-AV hh and not starting in the same taz and if the persons are not same for two trips
 	        		if(hh.getIfAvHousehold() == 0 ){
 	        			reposCostToNextTripOrigGik = NON_AV_REPO_COST;
 	        			reposCostToHome = NON_AV_REPO_COST;
-	        			if(!pairLi)
+	        			if(!pairLi || !samePerson)
 	        				reposCostToNextTripOrigSik = NON_AV_REPO_COST;
 	        		}
 	        		for ( int j=0; j < numAutos; j++ )     {
