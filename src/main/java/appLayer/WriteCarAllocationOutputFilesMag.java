@@ -136,6 +136,10 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 		periodIntervals[4][1] = Integer.valueOf( propertyMap.get( EV_PERIOD_END_KEY ) );
 		
 
+		String matrixFilesOutputString = propertyMap.get( OUTPUT_TRIP_TABLES_KEY );
+		boolean matrixFilesOutput = Boolean.valueOf( matrixFilesOutputString );
+		
+
 		String formatString = propertyMap.get( OUTPUT_TRIP_TABLE_FORMAT_KEY );
 		MatrixType matrixType = MatrixType.lookUpMatrixType( formatString );
         MatrixDataServer matrixDataServer = new MatrixDataServer();
@@ -851,71 +855,75 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	    logger.info(String.format( "%-60s","Total Unused AV Cars = ") + String.format("%,15d",totalUsedAVCars));
 
 
-		logger.info( "writing trip matrix files." );
-
-	    int offset = 0;
-	    if ( separateCavFiles )
-	    	offset = numModeTables;
+	    if ( matrixFilesOutput ) {
+	    	
+			logger.info( "writing trip matrix files." );
+	
+		    int offset = 0;
+		    if ( separateCavFiles )
+		    	offset = numModeTables;
+		    
+		    for ( int i=0; i < periodLabels.length; i++ ) {
+	
+				Matrix[] matrices = new Matrix[numModeTables];
+				String[] tripTableNames = new String[numModeTables];
+				if ( separateCavFiles ) {
+					matrices = new Matrix[numModeTables*2];
+					tripTableNames = new String[numModeTables*2];
+				}
+				
+				if ( separateCavFiles ) {
+					
+	    			for ( int j=0; j < numModeTables-1; j++ ) {
+	  					String description = periodLabels[i] + " period C/AV " + autoTripTableNames[j] + " trips";
+	  					float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, cavTripTables[i][j], tazValues );
+						tripTableNames[j] = autoTripTableNames[j]+"_cav";
+	  					matrices[j] = new Matrix( tripTableNames[j], description, orderedTable );
+	  					matrices[j].setExternalNumbers( extNumbers );
+	    			}
 	    
-	    for ( int i=0; i < periodLabels.length; i++ ) {
+	  				String description = periodLabels[i] + " period C/AV empty trips";
+	  				float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, cavTripTables[i][(numModeTables-1)], tazValues );
+					tripTableNames[(numModeTables-1)] = "empty_cav";
+	  				matrices[(numModeTables-1)] = new Matrix( tripTableNames[(numModeTables-1)], description, orderedTable );
+	  				matrices[(numModeTables-1)].setExternalNumbers( extNumbers );
+	  				
+	    			for ( int j=0; j < numModeTables-1; j++ ) {
+	  					description = periodLabels[i] + " period non-C/AV " + autoTripTableNames[j] + " trips";
+	  					orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][j], tazValues );
+						tripTableNames[j+offset] = autoTripTableNames[j];
+	  					matrices[j+offset] = new Matrix( tripTableNames[j+offset], description, orderedTable );
+	  					matrices[j+offset].setExternalNumbers( extNumbers );
+	    			}
+	    
+	  				description = periodLabels[i] + " period non-C/AV empty trips";
+	  				orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][(numModeTables-1)], tazValues );
+	  				tripTableNames[(numModeTables-1)+offset] = "empty";
+	  				matrices[(numModeTables-1)+offset] = new Matrix( tripTableNames[(numModeTables-1)+offset], description, orderedTable );
+	  				matrices[(numModeTables-1)+offset].setExternalNumbers( extNumbers );
+	
+				}
+				else {
+					
+	    			for ( int j=0; j < numModeTables; j++ ) {
+	  					String description = periodLabels[i] + " period " + autoTripTableNames[j] + " trips";
+	  					float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][j], tazValues );
+						tripTableNames[j] = autoTripTableNames[j];
+	  					matrices[j] = new Matrix( tripTableNames[j], description, orderedTable );
+	  					matrices[j].setExternalNumbers( extNumbers );
+	    			}
+	    
+				}
+	  				
+	  			
+	  			logger.info( "writing file: " + tripTableFiles[i] + ", matrixType: " + matrixType );
+	  			for ( String table : tripTableNames )
+	  	  			logger.info( "        " + table );
+	
+	  			matrixHandler.writeMatrixFile( tripTableFiles[i], matrices, tripTableNames, matrixType );
 
-			Matrix[] matrices = new Matrix[numModeTables];
-			String[] tripTableNames = new String[numModeTables];
-			if ( separateCavFiles ) {
-				matrices = new Matrix[numModeTables*2];
-				tripTableNames = new String[numModeTables*2];
-			}
-			
-			if ( separateCavFiles ) {
-				
-    			for ( int j=0; j < numModeTables-1; j++ ) {
-  					String description = periodLabels[i] + " period C/AV " + autoTripTableNames[j] + " trips";
-  					float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, cavTripTables[i][j], tazValues );
-					tripTableNames[j] = autoTripTableNames[j]+"_cav";
-  					matrices[j] = new Matrix( tripTableNames[j], description, orderedTable );
-  					matrices[j].setExternalNumbers( extNumbers );
-    			}
-    
-  				String description = periodLabels[i] + " period C/AV empty trips";
-  				float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, cavTripTables[i][(numModeTables-1)], tazValues );
-				tripTableNames[(numModeTables-1)] = "empty_cav";
-  				matrices[(numModeTables-1)] = new Matrix( tripTableNames[(numModeTables-1)], description, orderedTable );
-  				matrices[(numModeTables-1)].setExternalNumbers( extNumbers );
-  				
-    			for ( int j=0; j < numModeTables-1; j++ ) {
-  					description = periodLabels[i] + " period non-C/AV " + autoTripTableNames[j] + " trips";
-  					orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][j], tazValues );
-					tripTableNames[j+offset] = autoTripTableNames[j];
-  					matrices[j+offset] = new Matrix( tripTableNames[j+offset], description, orderedTable );
-  					matrices[j+offset].setExternalNumbers( extNumbers );
-    			}
-    
-  				description = periodLabels[i] + " period non-C/AV empty trips";
-  				orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][(numModeTables-1)], tazValues );
-  				tripTableNames[(numModeTables-1)+offset] = "empty";
-  				matrices[(numModeTables-1)+offset] = new Matrix( tripTableNames[(numModeTables-1)+offset], description, orderedTable );
-  				matrices[(numModeTables-1)+offset].setExternalNumbers( extNumbers );
-
-			}
-			else {
-				
-    			for ( int j=0; j < numModeTables; j++ ) {
-  					String description = periodLabels[i] + " period " + autoTripTableNames[j] + " trips";
-  					float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][j], tazValues );
-					tripTableNames[j] = autoTripTableNames[j];
-  					matrices[j] = new Matrix( tripTableNames[j], description, orderedTable );
-  					matrices[j].setExternalNumbers( extNumbers );
-    			}
-    
-			}
-  				
-  			
-  			logger.info( "writing file: " + tripTableFiles[i] + ", matrixType: " + matrixType );
-  			for ( String table : tripTableNames )
-  	  			logger.info( "        " + table );
-
-  			matrixHandler.writeMatrixFile( tripTableFiles[i], matrices, tripTableNames, matrixType );
-			    	
+		    }
+		    
 	    }
 	
 	}

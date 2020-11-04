@@ -20,6 +20,7 @@ public interface WriteCarAllocationOutputFilesIf {
 	
     public static final int TRIP_REPOSITIONING_PURPOSE = 20;
     
+	public static final String OUTPUT_TRIP_TABLES_KEY = "output.trip.matrices";
 	public static final String OUTPUT_TRIP_TABLE_FORMAT_KEY = "output.trip.matrices.format";
 	public static final String OUTPUT_TRIP_TABLE_CSV_FILENAME_KEY = "output.trip.matrices.csv.file";
 	public static final String MODE_TABLE_NAMES_KEY = "output.trip.matrix.mode.tables";
