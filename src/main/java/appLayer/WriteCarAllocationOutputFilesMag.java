@@ -527,8 +527,10 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	                					TRIP_REPOSITIONING_PURPOSE+","+
 	                					trip.getDestMaz()+","+
 	                					nextTrip.getOrigMaz()+","+
-	                					origTaz+","+
-	                					nextOrigTaz+","+
+		            					geogManager.getMazTazValue(trip.getDestMaz())+","+
+		            					geogManager.getMazTazValue(nextTrip.getOrigMaz())+","+
+	                					//origTaz+","+
+	                					//nextOrigTaz+","+
 	                					"-1"+","+
 	                					origHome+","+
 	                					destHome+","+
