@@ -506,7 +506,8 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	                        destHome = nextTrip.getOrigAct() == PurposeCategories.HOME.getIndex() ? 1 : 0;
 	                        origHome = trip.getDestAct() == PurposeCategories.HOME.getIndex() ? 1 : 0;
 	        				if(((SikForTrip[k]>threhsoldRoundUp & trip.getPnum() != nextTrip.getPnum())||GikForTrip[k]>threhsoldRoundUp) && destTaz != nextOrigTaz){ // no need to write intra-zonal car reposition trip
-	        					autoRecordDistance = sharedDistanceObject.getOffpeakDistanceFromTaz(origTaz)[geogManager.getMazTazValue(nextTrip.getOrigMaz())];
+	        					autoRecordDistance = sharedDistanceObject.getOffpeakDistanceFromTaz(geogManager.getMazTazValue(trip.getDestMaz()))[geogManager.getMazTazValue(nextTrip.getOrigMaz())];
+	        					//autoRecordDistance = sharedDistanceObject.getOffpeakDistanceFromTaz(origTaz)[geogManager.getMazTazValue(nextTrip.getOrigMaz())];
 	                			float departureTime = (scheduleDepart + trip.getSchedTime() + depLate - depEarly) ;
 	                			float arrivalTime = (scheduleDepart + trip.getSchedTime() + depLate - depEarly)+ Float.parseFloat(propertyMap.get("minutes.per.mile"))*autoRecordDistance;
 	                			if(SikForTrip[k]>threhsoldRoundUp){
@@ -515,8 +516,10 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	                				departureTime = (nextTrip.getSchedDepart() + depLateNext - depEarlyNext) - Float.parseFloat(propertyMap.get("minutes.per.mile"))*autoRecordDistance;
 	                				arrivalTime = (nextTrip.getSchedDepart() + depLateNext - depEarlyNext);
 	                			}
-	                			tripDistanceFromHome = distanceFromHome[nextOrigTaz];
-	                			tripDistanceFromHomeToOrig = distanceFromHome[destTaz];
+	                			tripDistanceFromHome = distanceFromHome[geogManager.getMazTazValue(nextTrip.getOrigMaz())];
+	                			tripDistanceFromHomeToOrig = distanceFromHome[geogManager.getMazTazValue(trip.getDestMaz())];
+	                			//tripDistanceFromHome = distanceFromHome[nextOrigTaz];
+	                			//tripDistanceFromHomeToOrig = distanceFromHome[destTaz];
 	        					record = hh.getId()+","+
 	                					(j+1)+","+
 	                					ifAvHh+","+
