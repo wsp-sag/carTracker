@@ -1,5 +1,7 @@
 package fileProcessing;
 
+import java.util.ArrayList;
+import java.util.List;
 
 public enum PurposeCategories {
 	
@@ -27,7 +29,8 @@ public enum PurposeCategories {
 	AT_WORK_BUS   ( "at work business",                12 ),
 	AT_WORK_LUN   ( "at work lunch",                   13 ),
 	AT_WORK_OTH   ( "at work other",                   14 ),
-	BUSINESS      ( "business",                        15 );
+	BUSINESS      ( "business",                        15 ),
+	CAMPUS_BUSINESS ( "campusBusiness",                16 );
 	
 	private final String label;
 	private final int index;
@@ -66,6 +69,13 @@ public enum PurposeCategories {
 				maxIndex = purpose.getIndex();
 		}
 		return maxIndex;
+	}
+
+	public static List<Integer> getPurposeIndices() {
+		List<Integer> purposeIndices = new ArrayList<>();
+		for ( PurposeCategories purpose : PurposeCategories.values() )
+			purposeIndices.add( purpose.getIndex() );
+		return purposeIndices;
 	}
 
 }

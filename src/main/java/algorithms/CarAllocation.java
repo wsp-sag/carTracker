@@ -1,6 +1,7 @@
 package algorithms;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +20,7 @@ import com.google.ortools.linearsolver.MPVariable;
 import fileProcessing.GlobalProperties;
 import fileProcessing.ParameterReader;
 import fileProcessing.PurposeCategories;
+import fileProcessing.VehicleTypeCategories;
 import fileProcessing.WorksheetWriter;
 import objects.AutoTrip;
 import objects.Household;
@@ -73,6 +75,25 @@ public class CarAllocation
 	private static final int BUSINESS_INDEX = 15;
 	private static final int BUSINESS_ASU_INDEX = 16;
 
+	private static final int PERSON_TYPE_UNIV_STUDENT = 3;
+	private static final int PERSON_TYPE_DRV_AGE_STUDENT = 6;
+
+	private static final int SOV_MODE = 1;
+	private static final int HOV2_MODE = 2;
+	private static final int HOV3p_MODE = 3;
+	private static final int TNC_TAXI_MODE = 37;
+
+	private static final String SMALL_CAR_SIZE = "sm";
+	
+	private static final List<Integer> MANDATORY_PURPOSE_INDICES = Arrays.asList( PurposeCategories.WORK.getIndex(), PurposeCategories.BUSINESS.getIndex(), 
+					PurposeCategories.SCHOOL.getIndex(), PurposeCategories.UNIVERSITY.getIndex(), PurposeCategories.CAMPUS_BUSINESS.getIndex() );
+
+	private static final List<Integer> ESCORTING_PURPOSE_INDICES = Arrays.asList( PurposeCategories.ESCORT.getIndex(), PurposeCategories.ESCORT_OTHER.getIndex(), 
+					PurposeCategories.ESCORT_SCHOOL.getIndex(), PurposeCategories.ESCORT_PE.getIndex(), PurposeCategories.ESCORT_RS.getIndex() );
+
+	private static final List<Integer> STUDENT_PERSON_TYPE_INDICES = Arrays.asList( PERSON_TYPE_UNIV_STUDENT, PERSON_TYPE_DRV_AGE_STUDENT );
+
+	private static final List<Integer> HOV_MODE_INDICES = Arrays.asList( HOV2_MODE, HOV3p_MODE );
 
     public static final int START_SIMULATION_TIME = HhCarAllocator.MIN_SIMULATION_TIME;
 
@@ -86,7 +107,9 @@ public class CarAllocation
     public static final long M_BIG_CONSTANT = (long) (Math.pow(2, 20)-1);
     public static final long NON_AV_REPO_COST = (long) (Math.pow(2, 15)-1);
 
-	private float parrkingScale;
+    public static final int NEGATIVE_DEPART_TIME_ADJUSTMENT = 720;
+    
+	private float parkingScale;
 
 
     private static final int MAX_ACT_INDEX = 9;
@@ -172,7 +195,9 @@ public class CarAllocation
 	private SharedDistanceMatrixData sharedDistanceObject;
 	private HashMap<String,String> propertyMap;
 
-	private float unstasfiedDemandDistancePealty = 0;
+	private VehicleTypeCategories vehicleTypeCategories;
+	
+	private float unsatisfiedDemandDistancePenalty = 0;
 	private float repositionCostPerMile = 0;
 	private float usualDrBonus = 0;
 	private float unusedCarBonus = 0;
@@ -193,7 +218,7 @@ public class CarAllocation
     	this.propertyMap = propertyMap;
     	this.socec = socec;
     	this.geogManager = geogManager;
-    	parrkingScale = Float.parseFloat(propertyMap.get("longterm.parking.daily.scale"));
+    	parkingScale = Float.parseFloat(propertyMap.get("longterm.parking.daily.scale"));
     	sharedDistanceObject= SharedDistanceMatrixData.getInstance(propertyMap, geogManager);
 
     	setParameterArrayValues( parameterInstance );
@@ -201,7 +226,7 @@ public class CarAllocation
 		// create a Map to translate purpose indices in the datastore to purpose indices in the Paramters table
 		createPurposeTranslationMap();
 		String test = propertyMap.get(GlobalProperties.UNSAT_DEMAND_DISTANCE_PENALTY.toString());
-		unstasfiedDemandDistancePealty = Float.parseFloat(propertyMap.get(GlobalProperties.UNSAT_DEMAND_DISTANCE_PENALTY.toString()));
+		unsatisfiedDemandDistancePenalty = Float.parseFloat(propertyMap.get(GlobalProperties.UNSAT_DEMAND_DISTANCE_PENALTY.toString()));
 		repositionCostPerMile = Float.parseFloat(propertyMap.get(GlobalProperties.CAR_REPOSITION_COST_PER_MILE.toString()));
 		usualDrBonus = Float.parseFloat(propertyMap.get(GlobalProperties.USUAL_DRIVER_BONUS.toString()));
 		minutesPerMile = Float.parseFloat(propertyMap.get(GlobalProperties.MINUTES_PER_MILE.toString()));
@@ -210,6 +235,10 @@ public class CarAllocation
 		logHhId= Integer.parseInt(propertyMap.get("log.report.hh.id"));
 		minimumActivityDuration= Float.parseFloat(propertyMap.get("min.activity.duration"));
 
+    	String filename = propertyMap.get("vehicle.type.definitions.filename");
+    	VehicleTypeCategories.createInstance(filename);
+    	vehicleTypeCategories = VehicleTypeCategories.getInstance();
+    	
     }
 
 
@@ -245,11 +274,15 @@ public class CarAllocation
 
 
 
-    private void setupObjectiveFunctionVariablesAndCoefficients( Household hh, MPSolver solver, int endOfSimulationMinute, int[][] xijIntergerization,
-    		int[][] xijFixFlag,int[][][] sikjIntergerization, int[][][] sikjFixFlag,int[][][] gikjIntergerization, int[][][] gikjFixFlag ) {
+    private void setupObjectiveFunctionVariablesAndCoefficients( Household hh, MPSolver solver, int endOfSimulationMinute, int[][] xijIntegerization,
+    		int[][] xijFixFlag,int[][][] sikjIntegerization, int[][][] sikjFixFlag,int[][][] gikjIntegerization, int[][][] gikjFixFlag ) {
 
     	try {
 
+    		int dummy = 0;
+    		if ( hh.getId() == 1568 )
+    			dummy = 1;
+    		
         	String name = null;
 
         	objective = solver.objective();
@@ -261,7 +294,8 @@ public class CarAllocation
 
         	int numAutos = hh.getNumAutos();
         	int homeMaz = hh.getHomeMaz();
-
+        	int[] hhCarTypes = hh.getHhCarTypes();
+        	
         	int homeTaz = geogManager.getMazTazValue(homeMaz);
 
         	float[] distanceFromHome = sharedDistanceObject.getOffpeakDistanceFromTaz(homeTaz);
@@ -339,14 +373,24 @@ public class CarAllocation
         			float lowerBound = 0;
         			float uppperBound = 1;
 
-        			if(xijIntergerization!= null){
+        			if(xijIntegerization!= null){
         				if(xijFixFlag[i][j] == 1){
-	        				lowerBound = xijIntergerization[i][j];
-	        				uppperBound = xijIntergerization[i][j];
+	        				lowerBound = xijIntegerization[i][j];
+	        				uppperBound = xijIntegerization[i][j];
         				}
         			}
+        			
+        			double[] disutils = {-1,0,0,0,0};
+        			int carType = hhCarTypes[j];
+        			String carSize = vehicleTypeCategories.getCarSize(carType);
+        			
+        			double carAllocationPreference = (ESCORTING_PURPOSE_INDICES.contains(ad) ? 1 : 0)*disutils[1] +
+        							(HOV_MODE_INDICES.contains(aTrip.getMode()) ? 1 : 0)*disutils[2] +
+        							(carSize.equalsIgnoreCase(SMALL_CAR_SIZE) ? 1 : 0)*disutils[3] +
+        							(Math.pow(aTrip.getDistance(),2))*disutils[4];
+        							
         			ofVarsIJ[INDEX_CarAllo ][i][j] = solver.makeIntVar( lowerBound, uppperBound, ( name = "CarAlloc_"+i+"_"+j ) );
-                    objective.setCoefficient( ofVarsIJ[INDEX_CarAllo][i][j], -usualDrBonus*usualDrDummy+(-0.0001*diffPnumAuto)); //j is added for singularity
+                    objective.setCoefficient( ofVarsIJ[INDEX_CarAllo][i][j], -usualDrBonus*usualDrDummy + carAllocationPreference + (-0.0001*diffPnumAuto)); //j is added for singularity
                     ofCoeffList.add( (float) (-usualDrBonus*usualDrDummy +(-0.0001*diffPnumAuto)));
             		variableNameList.add( name );
             		//ofVarsIJ[INDEX_CarAllo ][i][j].setInteger(true);
@@ -371,8 +415,8 @@ public class CarAllocation
         			logger.info(ad+"_"+pt);
         		float temp = UNSAT_DEM[ad][pt];
         		ofVarsI[INDEX_UnSatis ][i] = solver.makeNumVar( 0.0, 1, ( name = "UnSat_"+i ) );
-                objective.setCoefficient( ofVarsI[INDEX_UnSatis ][i], UNSAT_DEM[ad][pt]+tripDistance* unstasfiedDemandDistancePealty);
-                ofCoeffList.add( UNSAT_DEM[ad][pt]+tripDistance* unstasfiedDemandDistancePealty);
+                objective.setCoefficient( ofVarsI[INDEX_UnSatis ][i], UNSAT_DEM[ad][pt]+tripDistance* unsatisfiedDemandDistancePenalty);
+                ofCoeffList.add( UNSAT_DEM[ad][pt]+tripDistance* unsatisfiedDemandDistancePenalty);
         		variableNameList.add( name );
 
         		//IK variables
@@ -429,20 +473,16 @@ public class CarAllocation
 	        		}
 
 	        		// calculate parking cost at destination (for Sik)
-	        		if(ad == PurposeCategories.WORK.getIndex() ||ad == PurposeCategories.BUSINESS.getIndex() || ad == PurposeCategories.SCHOOL.getIndex() ||
-	        				ad == PurposeCategories.UNIVERSITY.getIndex())
-	        			parkCostSik = (parkingRateMonth[destMaz]/parrkingScale)/100; // parking in cents
+	        		if( MANDATORY_PURPOSE_INDICES.contains( ad ) )
+	        			parkCostSik = (parkingRateMonth[destMaz]/parkingScale)/100; // parking in cents
 	        		else
-	        			parkCostSik = (parkingRateHr[destMaz]/100)*(nextATrip.getSchedDepart()-aTrip.getSchedDepart()-
-	        					nextATrip.getSchedTime() - aTrip.getSchedTime())/60; // divided by 60 to convert minutes into hour
+	        			parkCostSik = (parkingRateHr[destMaz]/100)*(nextATrip.getSchedDepart() - (aTrip.getSchedDepart()+aTrip.getSchedTime()))/60; // divided by 60 to convert minutes into hour
 
 	        		// calculate parking cost at destination (for Gik)
-	        		if(nextAo == PurposeCategories.WORK.getIndex() ||nextAo == PurposeCategories.BUSINESS.getIndex() || nextAo == PurposeCategories.SCHOOL.getIndex() ||
-	        				nextAo == PurposeCategories.UNIVERSITY.getIndex())
-	        			parkCostGik = (parkingRateMonth[origMazNextTrip]/parrkingScale)/100; // parking in cents
+	        		if( MANDATORY_PURPOSE_INDICES.contains( nextAo ) )
+	        			parkCostGik = (parkingRateMonth[origMazNextTrip]/parkingScale)/100; // parking in cents
 	        		else
-	        			parkCostGik = (parkingRateHr[origMazNextTrip]/100)*(nextATrip.getSchedDepart()-aTrip.getSchedDepart()-
-	        					nextATrip.getSchedTime() - aTrip.getSchedTime())/60;
+	        			parkCostGik = (parkingRateHr[origMazNextTrip]/100)*(nextATrip.getSchedDepart() - (aTrip.getSchedDepart()+aTrip.getSchedTime()))/60;
 
 	        		// no parking cost for going home
 	        		if(ad == 0){
@@ -465,20 +505,20 @@ public class CarAllocation
 	        			float lowerBoundS = 0;
 	        			float uppperBoundS = 1;
 
-	        			if(sikjIntergerization!= null){
+	        			if(sikjIntegerization!= null){
 	        				if(sikjFixFlag[j][i][k] == 1){
-		        				lowerBoundS = sikjIntergerization[j][i][k];
-		        				uppperBoundS = sikjIntergerization[j][i][k];
+		        				lowerBoundS = sikjIntegerization[j][i][k];
+		        				uppperBoundS = sikjIntegerization[j][i][k];
 	        				}
 	        			}
 
 	        			float lowerBoundG= 0;
 	        			float uppperBoundG = 1;
 
-	        			if(gikjIntergerization!= null){
+	        			if(gikjIntegerization!= null){
 	        				if(gikjFixFlag[j][i][k] == 1){
-		        				lowerBoundG = gikjIntergerization[j][i][k];
-		        				uppperBoundG = gikjIntergerization[j][i][k];
+		        				lowerBoundG = gikjIntegerization[j][i][k];
+		        				uppperBoundG = gikjIntegerization[j][i][k];
 	        				}
 	        			}
 
@@ -531,7 +571,7 @@ public class CarAllocation
 		        			continue;
 		        		// Scheduling variables
 		        		//F5
-		        		float upperBound = trip.getSchedDepart();
+		        		float upperBound = trip.getSchedDepart() + NEGATIVE_DEPART_TIME_ADJUSTMENT;
 		        		ofVarsP[INDEX_DepEarly ][m][i] = solver.makeNumVar( 0.0d, upperBound, ( name = "DepEarly_"+m+"_"+i ) );
 		                objective.setCoefficient( ofVarsP[INDEX_DepEarly ][m][i], D_EARLY_FOR[ad][pt] + D_EARLY_FROM[ao][pt]);
 		                ofCoeffList.add( D_EARLY_FOR[ad][pt] + D_EARLY_FROM[ao][pt]);
@@ -616,7 +656,7 @@ public class CarAllocation
     		constraintsLP2[INDEX_1_1][i].setCoefficient( ofVarsI[INDEX_UnSatis][i], 1.0);
 
 
-    		float autoTripPlanDepTime = aTrip.getSchedDepart();
+    		float autoTripPlanDepTime = aTrip.getSchedDepart() + NEGATIVE_DEPART_TIME_ADJUSTMENT;
     		float autoTravelTime = aTrip.getSchedTime();
 
     		int origMaz = aTrip.getOrigMaz();
@@ -713,7 +753,7 @@ public class CarAllocation
 	    			constraintsLP3[INDEX_3_1][i][k][j].setCoefficient(ofVarsIJK[INDEX_SameTripParH][i][k][j], -1);
 	    			constraintNameList.add( name );
 
-	    			float nextTripPlanDep = nextATrip.getSchedDepart();
+	    			float nextTripPlanDep = nextATrip.getSchedDepart() + NEGATIVE_DEPART_TIME_ADJUSTMENT;
 	    			float nextTripTravelTime = nextATrip.getSchedTime();
 
 	    			rhsLP3[INDEX_4_1][i][k][j]= M_BIG_CONSTANT  - autoTripPlanDepTime +nextTripPlanDep - autoTravelTime - distanceToNextOrig*minutesPerMile;
@@ -1067,7 +1107,7 @@ public class CarAllocation
     }
 
 
-    public double[][][] getDepartArriveResults( Household hh, MPSolver solver ) {
+    public double[][][] getDepartArriveResults( Household hh, MPSolver solver, boolean solutionFound ) {
 
     	// declare an array to hold person-trip depart times in the 0 index and person-trip arrive times in the 1 index.
     	double[][][] departArriveResults = new double[DEP_ARR_INDICES][][];
@@ -1093,8 +1133,10 @@ public class CarAllocation
 
         		Trip trip = trips.get( tripIds.get( k ) );
         		int i = trip.getIndivTripId();
-        		departArriveResults[DEP_EARLY][m][i] = solver.lookupVariableOrNull( "DepEarly_"+m+"_"+i ).solutionValue();
-        		departArriveResults[DEP_LATE][m][i] = solver.lookupVariableOrNull( "DepLate_"+m+"_"+i ).solutionValue();
+        		if ( solutionFound ) {
+	        		departArriveResults[DEP_EARLY][m][i] = solver.lookupVariableOrNull( "DepEarly_"+m+"_"+i ).solutionValue();
+	        		departArriveResults[DEP_LATE][m][i] = solver.lookupVariableOrNull( "DepLate_"+m+"_"+i ).solutionValue();
+        		}
             }
     	}
 
@@ -1102,30 +1144,24 @@ public class CarAllocation
 
     }
 
-public double[] getUnsatisfiedRemandResults( Household hh, MPSolver solver ) {
+public double[] getUnsatisfiedRemandResults( Household hh, MPSolver solver, boolean solutionFound ) {
 
-    	// declare an array to hold person-trip depart times in the 0 index and person-trip arrive times in the 1 index.
-
-
-    	Person[] persons = hh.getPersons();
     	List<AutoTrip> aTrips = hh.getAutoTrips();
-    	int numAuto = hh.getNumAutos();
     	double[] carAllocationResults = new double[aTrips.size()];
 
     	for ( int i=0; i < aTrips.size(); i++ ) {
-    		carAllocationResults[i] = solver.lookupVariableOrNull(  "UnSat_"+i).solutionValue();
-
+    		if ( solutionFound ) {
+    			carAllocationResults[i] = solver.lookupVariableOrNull(  "UnSat_"+i).solutionValue();
+    		}
     	}
 
     	return carAllocationResults;
 
     }
- public double[][][] getCarAllocationResults( Household hh, MPSolver solver ) {
+ public double[][][] getCarAllocationResults( Household hh, MPSolver solver, boolean solutionFound ) {
 
-    	// declare an array to hold person-trip depart times in the 0 index and person-trip arrive times in the 1 index.
     	double[][][] carAllocationResults = new double[NUM_IJ_VARIABLE_INDICES][][];
 
-    	Person[] persons = hh.getPersons();
     	List<AutoTrip> aTrips = hh.getAutoTrips();
     	int numAuto = hh.getNumAutos();
 
@@ -1141,16 +1177,18 @@ public double[] getUnsatisfiedRemandResults( Household hh, MPSolver solver ) {
 
     	for ( int i=0; i < aTrips.size(); i++ ) {
         	for ( int j=0; j < numAuto; j++ ) {
-        		carAllocationResults[INDEX_CarAllo][i][j] = solver.lookupVariableOrNull(  "CarAlloc_"+i+"_"+j ).solutionValue();
-        		carAllocationResults[INDEX_FirstCarTrip][i][j] = solver.lookupVariableOrNull( "FirstCarTrip_"+i+"_"+j ).solutionValue();
-        		carAllocationResults[INDEX_LastCarTrip][i][j] = solver.lookupVariableOrNull( "LastCarTrip_"+i+"_"+j ).solutionValue();
+        		if ( solutionFound ) {
+	        		carAllocationResults[INDEX_CarAllo][i][j] = solver.lookupVariableOrNull(  "CarAlloc_"+i+"_"+j ).solutionValue();
+	        		carAllocationResults[INDEX_FirstCarTrip][i][j] = solver.lookupVariableOrNull( "FirstCarTrip_"+i+"_"+j ).solutionValue();
+	        		carAllocationResults[INDEX_LastCarTrip][i][j] = solver.lookupVariableOrNull( "LastCarTrip_"+i+"_"+j ).solutionValue();
+        		}
             }
     	}
 
     	return carAllocationResults;
 
     }
- public double[][][][] getCarLinkingResults( Household hh, MPSolver solver ) {
+ public double[][][][] getCarLinkingResults( Household hh, MPSolver solver, boolean solutionFound ) {
 
  	// declare an array to hold person-trip depart times in the 0 index and person-trip arrive times in the 1 index.
  	double[][][][] carLinkingResults = new double[NUM_IJK_VARIABLE_INDICES][][][];
@@ -1175,12 +1213,14 @@ public double[] getUnsatisfiedRemandResults( Household hh, MPSolver solver ) {
  	for ( int i=0; i < aTrips.size(); i++ ) {
      	for ( int j=0; j < numAuto; j++ ) {
      		for(int k = i+1; k < aTrips.size(); k++){
-     			carLinkingResults[INDEX_SameTripParkDi][j][i][k] = solver.lookupVariableOrNull(  "ParkDi_"+i+"_"+k+"_"+j ).solutionValue();
-     			carLinkingResults[INDEX_SameTripParkOk][j][i][k] = solver.lookupVariableOrNull( "ParkOk_"+i+"_"+k+"_"+j ).solutionValue();
-     			carLinkingResults[INDEX_SameTripParH][j][i][k] = solver.lookupVariableOrNull(  "ParkH_"+i+"_"+k+"_"+j ).solutionValue();
-     			carLinkingResults[INDEX_CarLink][j][i][k] = solver.lookupVariableOrNull("CarLink_"+i+"_"+k+"_"+j ).solutionValue();
+        		if ( solutionFound ) {
+	     			carLinkingResults[INDEX_SameTripParkDi][j][i][k] = solver.lookupVariableOrNull(  "ParkDi_"+i+"_"+k+"_"+j ).solutionValue();
+	     			carLinkingResults[INDEX_SameTripParkOk][j][i][k] = solver.lookupVariableOrNull( "ParkOk_"+i+"_"+k+"_"+j ).solutionValue();
+	     			carLinkingResults[INDEX_SameTripParH][j][i][k] = solver.lookupVariableOrNull(  "ParkH_"+i+"_"+k+"_"+j ).solutionValue();
+	     			carLinkingResults[INDEX_CarLink][j][i][k] = solver.lookupVariableOrNull("CarLink_"+i+"_"+k+"_"+j ).solutionValue();
+        		}
+     		}
      	}
- 	}
  	}
 
  	return carLinkingResults;

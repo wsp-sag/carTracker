@@ -70,6 +70,7 @@ public class AbmObjectTranslater {
 
 	public static final String HH_ID_KEY = "hh.file.id.field";
 	public static final String HH_MAZ_KEY = "hh.maz.field";
+	public static final String HH_CAR_TYPES_KEY = "hh.car.types";
 	public static final String HH_AV_FLAG_KEY="hh.av.flag.field";
 	public static final String PERSON_TYPE_FIELD_KEY = "person.type.field";
 	public static final String PERSON_USUAL_CAR_ID_FIELD_KEY = "person.usualcar.id.field";
@@ -119,6 +120,7 @@ public class AbmObjectTranslater {
 	private String actDurationField;
 	private String numAutosField;
 	private String homeMazField;
+	private String hhCarTypesField;
 	private String ifAvHhField;
 	private String hidAcrossSampleField;
 	private String usualCarIdField;
@@ -171,6 +173,7 @@ public class AbmObjectTranslater {
 		numAutosField = propertyMap.get(NUM_AUTOS_FIELD_KEY);
 		actDurationField = propertyMap.get(TRIP_ACTIVITY_DURATION_KEY);
 		homeMazField = propertyMap.get(HH_MAZ_KEY);
+		hhCarTypesField = propertyMap.get(HH_CAR_TYPES_KEY);
 		ifAvHhField= propertyMap.get(HH_AV_FLAG_KEY);
 		hidAcrossSampleField = propertyMap.get(HH_ID_WO_SAMPLE_FIELD_KEY);
 		usualCarIdField = propertyMap.get(PERSON_USUAL_CAR_ID_FIELD_KEY);
@@ -939,6 +942,24 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 		
 	}
 	
+	public int[] getHhCarTypes( int hhid ) {
+		
+		// get a map of file field numbers to tripRecord field positions
+		Map<String,Integer> fieldIndexMap = dataStore.getHhFieldIndexMap();
+		int carTypesFieldIndex = fieldIndexMap.get(hhCarTypesField);
+				
+		List<List<String>> hhecords = dataStore.getHouseholdRecords(hhid);
+		String carTypesString = "";
+	
+		for ( List<String> record : hhecords ) {
+			carTypesString = record.get( carTypesFieldIndex );
+		}
+		
+		int[] carTypes = Parsing.getOneDimensionalIntArrayValuesFromExportString( carTypesString );
+		return carTypes;
+		
+	}
+
 	public int getNumAutos( int hhid ) {
 		
 		// get a map of file field numbers to tripRecord field positions

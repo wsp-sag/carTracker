@@ -88,10 +88,14 @@ public class CarAllocatorMain {
         
         SharedDistanceMatrixData sharedDistanceObject = SharedDistanceMatrixData.getInstance(propertyMap, geogManager);
         String outputProbCarChangeFileName = propertyMap.get("output.hh.car.change.prob.file")+"_"+propertyMap.get("scenario.suffix.name")+".csv";
+        String outputVehTypePurposeSummaryFileName = propertyMap.get("output.vehicle.type.purpose.summary.file");
+        String outputVehTypePersTypeSummaryFileName = propertyMap.get("output.vehicle.type.perstype.summary.file");
+        String outputVehTypeDistanceSummaryFileName = propertyMap.get("output.vehicle.type.distance.summary.file");
         writer.writeCarAllocationOutputFile(logger, propertyMap, 
         	propertyMap.get("output.trip.file")+"_"+propertyMap.get("scenario.suffix.name")+".csv",
         	propertyMap.get("output.car.use.file")+"_"+propertyMap.get("scenario.suffix.name")+".csv",
-        	outputProbCarChangeFileName, carAllocationResults, geogManager, sharedDistanceObject, socec, constants);
+        	outputProbCarChangeFileName, outputVehTypePurposeSummaryFileName, outputVehTypePersTypeSummaryFileName, outputVehTypeDistanceSummaryFileName,
+        	carAllocationResults, geogManager, sharedDistanceObject, socec, constants);
                 
         return null;
     }   

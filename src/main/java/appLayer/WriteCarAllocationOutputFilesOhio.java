@@ -73,6 +73,7 @@ public class WriteCarAllocationOutputFilesOhio implements WriteCarAllocationOutp
 	
     public void writeCarAllocationOutputFile( Logger logger, HashMap<String, String> propertyMap, 
     	String outputTripListFilename, String outputDisaggregateCarUseFileName, String outputProbCarChangeFileName,
+    	String outputVehTypePurposeSummaryFileName, String outputVehTypePersTypeSummaryFileName, String outputVehTypeDistanceSummaryFileName,
     	List<HouseholdCarAllocation> hhCarAllocationResultsList, GeographyManager geogManager,
     	SharedDistanceMatrixData sharedDistanceObject, SocioEconomicDataManager socec, ConstantsIf constants) {
 
