@@ -8,6 +8,7 @@ import org.apache.log4j.Logger;
 import accessibility.GeographyManager;
 import accessibility.SharedDistanceMatrixData;
 import accessibility.SocioEconomicDataManager;
+import fileProcessing.VehicleTypePreferences;
 import objects.HouseholdCarAllocation;
 import utility.ConstantsIf;
 import utility.Parsing;
@@ -54,7 +55,7 @@ public interface WriteCarAllocationOutputFilesIf {
 			    	String outputVehTypePurposeSummaryFileName, String outputVehTypePersTypeSummaryFileName, String outputVehTypeDistanceSummaryFileName,
 			    	List<HouseholdCarAllocation> hhCarAllocationResultsList, GeographyManager geogManager,
 			    	SharedDistanceMatrixData sharedDistanceObject, SocioEconomicDataManager socec,
-			    	ConstantsIf constants);
+			    	ConstantsIf constants, VehicleTypePreferences vehicleTypePreferences);
 	
 
     default int getTripTablePeriod(int departureInterval, int[][] periodIntervals){

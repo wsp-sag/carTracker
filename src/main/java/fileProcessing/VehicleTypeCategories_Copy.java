@@ -9,7 +9,7 @@ import java.util.Random;
 import utility.BinarySearch;
 import utility.Parsing;
 
-public class VehicleTypeCategories {
+public class VehicleTypeCategories_Copy {
 
 	private static final String CATEGORY_FIELD_NAME = "category";
 	private static final String BODY_TYPE_FIELD_NAME = "bodyType";
@@ -25,7 +25,7 @@ public class VehicleTypeCategories {
 	
 	public final int MAX_AUTOS_ALLOCATED = 4;
 
-	private static VehicleTypeCategories INSTANCE;
+	private static VehicleTypeCategories_Copy INSTANCE;
 	private final Map<Integer, List<String>> vehicleTypeDefsMap;
 	private final List<String> tableFieldNames;
 	private final Map<String,Integer> fieldNameIndices;
@@ -35,7 +35,7 @@ public class VehicleTypeCategories {
 	private final Random rand = new Random(1234567);
 	
 	
-	private VehicleTypeCategories(String filename) {		
+	private VehicleTypeCategories_Copy(String filename) {		
 		vehicleTypeDefsMap = Parsing.parseCsvFileFieldsToMap( filename );		
 		tableFieldNames = vehicleTypeDefsMap.get(0);
 		fieldNameIndices = new HashMap<>();
@@ -61,14 +61,14 @@ public class VehicleTypeCategories {
 		}
 	}
 	
-	public static VehicleTypeCategories createInstance(String filename) {
+	public static VehicleTypeCategories_Copy createInstance(String filename) {
 		if (INSTANCE == null) {
-			INSTANCE = new VehicleTypeCategories(filename);
+			INSTANCE = new VehicleTypeCategories_Copy(filename);
 		}
 		return INSTANCE;
 	}
 	
-	public static VehicleTypeCategories getInstance() {
+	public static VehicleTypeCategories_Copy getInstance() {
 		return INSTANCE;
 	}
 

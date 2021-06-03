@@ -24,7 +24,8 @@ public class Household implements Serializable {
 	private List<AutoTrip> autoTrips;
 	private int numAutoTrips;
 	private int ifAvHh;
-	private int[] hhCarTypes;
+	private int[] hhVehFuelTypes;
+	private int[] hhVehBodyTypes;
 	
 	public Household( int hhid, int hidAcrossSample, int[] persTypes,int[][] usualCarIds, List<Trip> trips, Map<Integer, int[][]> jointParties, int numAutos, List<AutoTrip> autoTrips, int homeMaz, int numAutoTrips, int ifAvHh) {
 		
@@ -69,9 +70,14 @@ public class Household implements Serializable {
 		return trips;
 	}
 	
-	public void sethhCarTypes( int[] hhCarTypes ) {
-		this.hhCarTypes = hhCarTypes;
+	public void setHhVehFuelTypes( int[] hhVehFuelTypes ) {
+		this.hhVehFuelTypes = hhVehFuelTypes;
 	}
+
+	public void setHhVehBodyTypes( int[] hhVehBodyTypes ) {
+		this.hhVehBodyTypes = hhVehBodyTypes;
+	}
+
 	public void setNumIndivTripRecords( int trips ) {
 		numIndivTripRecords = trips;
 	}
@@ -116,7 +122,10 @@ public class Household implements Serializable {
 	public int getIfAvHousehold(){
 		return ifAvHh;
 	}
-	public int[] getHhCarTypes() {
-		return hhCarTypes;
+	public int[] getHhVehFuelTypes() {
+		return hhVehFuelTypes;
+	}
+	public int[] getHhVehBodyTypes() {
+		return hhVehBodyTypes;
 	}
 }

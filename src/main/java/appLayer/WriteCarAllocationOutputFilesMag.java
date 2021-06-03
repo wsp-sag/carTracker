@@ -27,7 +27,7 @@ import com.pb.common.util.IndexSort;
 
 import fileProcessing.GlobalProperties;
 import fileProcessing.PurposeCategories;
-import fileProcessing.VehicleTypeCategories;
+import fileProcessing.VehicleTypePreferences;
 import objectMapping.AbmObjectTranslater;
 import objects.AutoTrip;
 import objects.Household;
@@ -42,6 +42,7 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	private static final int MAX_PERSON_TYPE = 8;
 	private static final double[] distanceBoundaries = { 2.0, 5.0, 10.0, 20.0, 30.0, 50.0, 75.0, 100.0, 9999 };
 	private static final String[] distanceBins = { "0-2", "2-5", "5-10", "10-20", "20-30", "30-50", "50-75", "75-100", "100+" };
+	private static final String[] modes = { "sov", "hov2", "hov3+" };
 	
     public static float threhsoldRoundUp = 0.7f;
 	private float tripExpansionFactor = 1.0f;
@@ -79,7 +80,7 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
     	String outputTripListFilename, String outputDisaggregateCarUseFileName, String outputProbCarChangeFileName,
     	String outputVehTypePurposeSummaryFileName, String outputVehTypePersTypeSummaryFileName, String outputVehTypeDistanceSummaryFileName,
     	List<HouseholdCarAllocation> hhCarAllocationResultsList, GeographyManager geogManager,
-    	SharedDistanceMatrixData sharedDistanceObject, SocioEconomicDataManager socec, ConstantsIf constants) {
+    	SharedDistanceMatrixData sharedDistanceObject, SocioEconomicDataManager socec, ConstantsIf constants, VehicleTypePreferences vehicleTypePreferences) {
 
 
     	Map<Integer, Integer> purposeIndexMap = new HashMap<>();
@@ -89,15 +90,14 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
     		purposeIndexMap.put( purp, (index++) );
     	
     	Map<Integer, Integer> vehTypeIndexMap = new HashMap<>();
-    	List<Integer> vehTypes = VehicleTypeCategories.getInstance().getVehicleTypeIndices();
+    	List<Integer> vehTypes = vehicleTypePreferences.getCategories();
     	index = 0;
     	for ( int type : vehTypes )
-    		if ( type > 0 )
-    			vehTypeIndexMap.put( type, (index++) );
+   			vehTypeIndexMap.put( type, (index++) );
     	
-    	int[][] tripsByVehTypeByPurpose = new int[vehTypeIndexMap.values().size()][tripPurposes.size()];
-    	int[][] tripsByVehTypeByPersonType = new int[vehTypeIndexMap.values().size()][MAX_PERSON_TYPE+1];
-    	int[][] tripsByVehTypeByDistanceBin = new int[vehTypeIndexMap.values().size()][distanceBoundaries.length];
+    	int[][][] tripsByVehTypeByPurpose = new int[modes.length][vehTypeIndexMap.values().size()][tripPurposes.size()];
+    	int[][][] tripsByVehTypeByPersonType = new int[modes.length][vehTypeIndexMap.values().size()][MAX_PERSON_TYPE+1];
+    	int[][][] tripsByVehTypeByDistanceBin = new int[modes.length][vehTypeIndexMap.values().size()][distanceBoundaries.length];
     	              
         threhsoldRoundUp = Float.parseFloat(propertyMap.get(GlobalProperties.ROUND_UP_THRESHOLD.toString()));
         tripExpansionFactor = 1.0f/Float.parseFloat(propertyMap.get("global.proportion"));
@@ -198,7 +198,7 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
       PrintWriter outStreamDistSummary = null;
 	    try {
 	    	outStreamTrip = new PrintWriter( new BufferedWriter( new FileWriter( outputTripListFilename ) ) );
-	        String header1 = "hhid,pnum,tripid,tripRecNum,mode,vehId,vehType,origPurp,destPurp,origMaz,destMaz,origTaz,destTaz,distanceFromHome,plannedDepartureTime,departureEarly,departureLate,finalDeparture, finalArrival,x1,x2,x3,x4,unsatisfiedResult,numIterationIntegerizing";
+	        String header1 = "hhid,pnum,tripid,tripRecNum,mode,vehId,vehFuelType,vehBodyType,origPurp,destPurp,origMaz,destMaz,origTaz,destTaz,distanceFromHome,plannedDepartureTime,departureEarly,departureLate,finalDeparture, finalArrival,x1,x2,x3,x4,unsatisfiedResult,numIterationIntegerizing";
 	        outStreamTrip.println( header1 );   
 	        outStreamCar = new PrintWriter( new BufferedWriter( new FileWriter( outputDisaggregateCarUseFileName ) ) );
 	        String header2 = "hhid,carId,aVStatus,autoTripId,autoHhTripId,driverId,origPurp,destPurp,origMaz,destMaz,origTaz,destTaz,carRepositionType,origHome,destHome,tripDistance,distanceFromHomeToOrig,distanceFromHomeToDest,plannedDeparture,finalDeparture,finalArrival,departureEarly,departureLate,parkDurationAtDestination,ParkCostAtDestination,parkDurationAtNextOrigin,parkCostAtNextOrigin";
@@ -271,7 +271,8 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	        	carSufficiencyLevel = 2;
 	        	
 	        int homeMaz = hh.getHomeMaz();
-        	int[] hhCarTypes = hh.getHhCarTypes();
+        	int[] hhVehFuelTypes = hh.getHhVehFuelTypes();
+        	int[] hhVehBodyTypes = hh.getHhVehBodyTypes();
 	    	
 	    	int homeTaz = geogManager.getMazTazValue(homeMaz);
 	    	
@@ -328,9 +329,16 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	            int origTaz = geogManager.getMazTazValue(trip.getOrigMaz());
 	            int destTaz = geogManager.getMazTazValue(trip.getDestMaz());
 	            float tripDistanceFromHome = distanceFromHome[geogManager.getMazTazValue(trip.getDestMaz())];
-	            int tripCarType = (trip.getVehId() > 0 ? hhCarTypes[ trip.getVehId()-1 ] : -1);
+	            int tripVehFuelType = -1;
+	            int tripVehBodyType = -1;
+	            int tripVehTypeCategory = -1;
+	            if ( trip.getVehId() > 0 ) {
+	            	tripVehFuelType = hhVehFuelTypes[ trip.getVehId()-1 ];
+	            	tripVehBodyType = hhVehBodyTypes[ trip.getVehId()-1 ];
+	            	tripVehTypeCategory = vehicleTypePreferences.getCategory(tripVehFuelType, tripVehBodyType);
+	            }
 	            String record = hh.getId()+","+ trip.getPnum()+","+ trip.getUniqueTripId()+","+ trip.getTripRecNum()+","+trip.getMode()+","+
-	                    		trip.getVehId()+","+tripCarType+","+trip.getOrigAct()+","+ trip.getDestAct()+","+ trip.getOrigMaz()+","+ trip.getDestMaz()+","+ origTaz + ","+ destTaz+","+tripDistanceFromHome+","+trip.getSchedDepart()+","+ depEarly+","+ depLate +","+finalDeparture+","+finalArrival+","+
+	                    		trip.getVehId()+","+tripVehFuelType+","+tripVehBodyType+","+trip.getOrigAct()+","+ trip.getDestAct()+","+ trip.getOrigMaz()+","+ trip.getDestMaz()+","+ origTaz + ","+ destTaz+","+tripDistanceFromHome+","+trip.getSchedDepart()+","+ depEarly+","+ depLate +","+finalDeparture+","+finalArrival+","+
 	                    		xij[0]+","+xij[1]+","+xij[2]+","+xij[3] + ","+ unsatisRes + ","+ depArrObj.getNumIterationsForIntegerizing();
 	                    
 	            outStreamTrip.println( record );     
@@ -343,15 +351,17 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	    	//        autoTripTables[getTripTablePeriod(period)][4-1][tazIndices[geogManager.getMazTazValue(trip.getDestMaz())]][tazIndices[geogManager.getMazTazValue(hh.getHomeMaz())]] += tripExpansionFactor;
 				//}	            
 	        
-	            if ( tripCarType > 0 ) {
-	            	int vtIndex = vehTypeIndexMap.get(tripCarType);
+	            if ( tripVehTypeCategory > 0 ) {
+	            	int vtIndex = vehTypeIndexMap.get(tripVehTypeCategory);
 	            	int purpIndex = purposeIndexMap.get(trip.getDestAct());
 	            	int ptIndex = hh.getPersons()[trip.getPnum()].getPersonType();
 	            	int distBin = getDistanceBinIndex(tripDistanceFromHome);
-	            	tripsByVehTypeByPurpose[vtIndex][purpIndex]++;
-	            	tripsByVehTypeByPersonType[vtIndex][ptIndex]++;
-	            	tripsByVehTypeByDistanceBin[vtIndex][distBin]++;
+	            	int modeIndex = trip.getMode()-1;
+	            	tripsByVehTypeByPurpose[modeIndex][vtIndex][purpIndex]++;
+	            	tripsByVehTypeByPersonType[modeIndex][vtIndex][ptIndex]++;
+	            	tripsByVehTypeByDistanceBin[modeIndex][vtIndex][distBin]++;
 	            }
+
 	        }
 	        
 	        
@@ -826,16 +836,16 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	    			//add them as taxi
 
 
-		            int tripCarType = VehicleTypeCategories.getInstance().getTncType();
-		            if ( tripCarType > 0 ) {
-		            	int vtIndex = vehTypeIndexMap.get(tripCarType);
-		            	int purpIndex = purposeIndexMap.get(trip.getDestAct());
-		            	int ptIndex = hh.getPersons()[trip.getPnum()].getPersonType();
-		            	int distBin = getDistanceBinIndex(tripDistanceFromHome);
-		            	tripsByVehTypeByPurpose[vtIndex][purpIndex]++;
-		            	tripsByVehTypeByPersonType[vtIndex][ptIndex]++;
-		            	tripsByVehTypeByDistanceBin[vtIndex][distBin]++;
-		            }
+//		            int tripCarType = VehicleTypeCategories.getInstance().getTncType();
+//		            if ( tripCarType > 0 ) {
+//		            	int vtIndex = vehTypeIndexMap.get(tripCarType);
+//		            	int purpIndex = purposeIndexMap.get(trip.getDestAct());
+//		            	int ptIndex = hh.getPersons()[trip.getPnum()].getPersonType();
+//		            	int distBin = getDistanceBinIndex(tripDistanceFromHome);
+//		            	tripsByVehTypeByPurpose[vtIndex][purpIndex]++;
+//		            	tripsByVehTypeByPersonType[vtIndex][ptIndex]++;
+//		            	tripsByVehTypeByDistanceBin[vtIndex][distBin]++;
+//		            }
 	    			
 		            period = getTripTablePeriod(CommonProcedures.convertMinutesToInterval(trip.getSchedDepart()+depLate-depEarly, constants), periodIntervals); 
 		            if(!ifExternalStationsIncluded ||(!ArrayUtils.contains(geogManager.getExternalStations(),origTaz) && !ArrayUtils.contains(geogManager.getExternalStations(),destTaz))) {
@@ -885,9 +895,9 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	    outStreamTrip.close();
 	    outStreamHh.close();
 	    
-        writePurposeSummaryFile(tripPurposes, vehTypeIndexMap, tripsByVehTypeByPurpose, outStreamPurpSummary );
-        writePersTypeSummaryFile( vehTypeIndexMap, tripsByVehTypeByPersonType, outStreamPersTypeSummary );
-        writeDistanceSummaryFile( vehTypeIndexMap, tripsByVehTypeByDistanceBin, outStreamDistSummary );
+        writePurposeSummaryFile(tripPurposes, vehicleTypePreferences, vehTypeIndexMap, tripsByVehTypeByPurpose, outStreamPurpSummary );
+        writePersTypeSummaryFile( vehicleTypePreferences, vehTypeIndexMap, tripsByVehTypeByPersonType, outStreamPersTypeSummary );
+        writeDistanceSummaryFile( vehicleTypePreferences, vehTypeIndexMap, tripsByVehTypeByDistanceBin, outStreamDistSummary );
 
         
 	    logger.info(" ");
@@ -997,7 +1007,7 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	
 	}
 
-	private void writePurposeSummaryFile(List<Integer> tripPurposes, Map<Integer, Integer> vehTypeIndexMap, int[][] tripsByVehTypeByPurpose, PrintWriter outStreamPurpSummary) {
+	private void writePurposeSummaryFile(List<Integer> tripPurposes, VehicleTypePreferences vehicleTypePreferences, Map<Integer, Integer> vehTypeIndexMap, int[][][] tripsByVehTypeByPurpose, PrintWriter outStreamPurpSummary) {
 		if ( outStreamPurpSummary != null ) {
         	
 	        String header = "vehicleType,category,fuelType,bodyType,carSize,tripMode";
@@ -1005,70 +1015,85 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	        	header += ",purp_" + purp;
 	        outStreamPurpSummary.println( header );
 	        
-	        for ( int vehType : vehTypeIndexMap.keySet() ) {
-	        	String record = vehType +
-	        					"," + VehicleTypeCategories.getInstance().getCategory(vehType) +
-	        					"," + VehicleTypeCategories.getInstance().getFuelType(vehType) +
-	        					"," + VehicleTypeCategories.getInstance().getBodyType(vehType) +
-	        					"," + VehicleTypeCategories.getInstance().getCarSize(vehType) +
-	        					"," + VehicleTypeCategories.getInstance().getTripMode(vehType);
-	        	int vtIndex = vehTypeIndexMap.get(vehType);
-	        	int[] values = tripsByVehTypeByPurpose[vtIndex];
-	        	for ( int p=0; p < values.length; p++ )
-	        		record += "," + values[p];
-		        outStreamPurpSummary.println( record );
+	        int n = 1;
+	        for ( int i=0; i < modes.length; i++   ) {
+
+		        for ( int vehType : vehTypeIndexMap.keySet() ) {
+		        	String record = (n++) +
+		        					"," + vehicleTypePreferences.getCategory(vehType-1) +
+		        					"," + vehicleTypePreferences.getFuelType(vehType-1) +
+		        					"," + vehicleTypePreferences.getBodyType(vehType-1) +
+		        					"," + vehicleTypePreferences.getVehSize(vehType-1) +
+		        					"," + modes[i];
+		        	int vtIndex = vehTypeIndexMap.get(vehType);
+		        	int[] values = tripsByVehTypeByPurpose[i][vtIndex];
+		        	for ( int p=0; p < values.length; p++ )
+		        		record += "," + values[p];
+			        outStreamPurpSummary.println( record );
+		        }
+	        	
 	        }
 
 		    outStreamPurpSummary.close();
         }
 	}
 
-	private void writePersTypeSummaryFile( Map<Integer, Integer> vehTypeIndexMap, int[][] tripsByVehTypeByPersonType, PrintWriter outStream) {
+	private void writePersTypeSummaryFile( VehicleTypePreferences vehicleTypePreferences, Map<Integer, Integer> vehTypeIndexMap, int[][][] tripsByVehTypeByPersonType, PrintWriter outStream) {
 		if ( outStream != null ) {
         	
-	        String header = "vehicleType,category,fuelType,bodyType,carSize,tripMode";
+	        String header = "n,category,fuelType,bodyType,carSize,tripMode";
 	        for ( int persType=1; persType <= MAX_PERSON_TYPE; persType++ )
 	        	header += ",persType_" + persType;
 	        outStream.println( header );
 	        
-	        for ( int vehType : vehTypeIndexMap.keySet() ) {
-	        	String record = vehType +
-	        					"," + VehicleTypeCategories.getInstance().getCategory(vehType) +
-	        					"," + VehicleTypeCategories.getInstance().getFuelType(vehType) +
-	        					"," + VehicleTypeCategories.getInstance().getBodyType(vehType) +
-	        					"," + VehicleTypeCategories.getInstance().getCarSize(vehType) +
-	        					"," + VehicleTypeCategories.getInstance().getTripMode(vehType);
-	        	int vtIndex = vehTypeIndexMap.get(vehType);
-	        	int[] values = tripsByVehTypeByPersonType[vtIndex];
-	        	for ( int p=1; p < values.length; p++ )
-	        		record += "," + values[p];
-	        	outStream.println( record );
+	        int n = 1;
+	        for ( int i=0; i < modes.length; i++   ) {
+
+		        for ( int vehType : vehTypeIndexMap.keySet() ) {
+		        	String record = (n++) +
+		        					"," + vehicleTypePreferences.getCategory(vehType-1) +
+		        					"," + vehicleTypePreferences.getFuelType(vehType-1) +
+		        					"," + vehicleTypePreferences.getBodyType(vehType-1) +
+		        					"," + vehicleTypePreferences.getVehSize(vehType-1) +
+		        					"," + modes[i];
+		        	int vtIndex = vehTypeIndexMap.get(vehType);
+		        	int[] values = tripsByVehTypeByPersonType[i][vtIndex];
+		        	for ( int p=1; p < values.length; p++ )
+		        		record += "," + values[p];
+		        	outStream.println( record );
+		        }
+	        	
 	        }
 
 	        outStream.close();
         }
 	}
 
-	private void writeDistanceSummaryFile( Map<Integer, Integer> vehTypeIndexMap, int[][] tripsByVehTypeByDistance, PrintWriter outStream) {
+	private void writeDistanceSummaryFile( VehicleTypePreferences vehicleTypePreferences, Map<Integer, Integer> vehTypeIndexMap, int[][][] tripsByVehTypeByDistance, PrintWriter outStream) {
 		if ( outStream != null ) {
         	
-	        String header = "vehicleType,category,fuelType,bodyType,carSize,tripMode";
+	        String header = "n,category,fuelType,bodyType,carSize,tripMode";
 	        for ( int bin=0; bin < distanceBins.length; bin++ )
 	        	header += ",\"" + distanceBins[bin] + "\"";
 	        outStream.println( header );
-	        
-	        for ( int vehType : vehTypeIndexMap.keySet() ) {
-	        	String record = vehType +
-	        					"," + VehicleTypeCategories.getInstance().getCategory(vehType) +
-	        					"," + VehicleTypeCategories.getInstance().getFuelType(vehType) +
-	        					"," + VehicleTypeCategories.getInstance().getBodyType(vehType) +
-	        					"," + VehicleTypeCategories.getInstance().getCarSize(vehType) +
-	        					"," + VehicleTypeCategories.getInstance().getTripMode(vehType);
-	        	int vtIndex = vehTypeIndexMap.get(vehType);
-	        	int[] values = tripsByVehTypeByDistance[vtIndex];
-	        	for ( int b=0; b < values.length; b++ )
-	        		record += "," + values[b];
-	        	outStream.println( record );
+
+	        int n = 1;
+	        for ( int i=0; i < modes.length; i++   ) {
+	        	
+		        for ( int vehType : vehTypeIndexMap.keySet() ) {
+		        	String record = (n++) +
+		        					"," + vehicleTypePreferences.getCategory(vehType-1) +
+		        					"," + vehicleTypePreferences.getFuelType(vehType-1) +
+		        					"," + vehicleTypePreferences.getBodyType(vehType-1) +
+		        					"," + vehicleTypePreferences.getVehSize(vehType-1) +
+		        					"," + modes[i];
+		        	int vtIndex = vehTypeIndexMap.get(vehType);
+		        	int[] values = tripsByVehTypeByDistance[i][vtIndex];
+		        	for ( int b=0; b < values.length; b++ )
+		        		record += "," + values[b];
+		        	outStream.println( record );
+		        }
+	        	
 	        }
 
 	        outStream.close();

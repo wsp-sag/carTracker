@@ -26,6 +26,7 @@ import com.pb.common.util.IndexSort;
 
 import fileProcessing.GlobalProperties;
 import fileProcessing.PurposeCategories;
+import fileProcessing.VehicleTypePreferences;
 import objectMapping.AbmObjectTranslater;
 import objects.AutoTrip;
 import objects.Household;
@@ -75,7 +76,7 @@ public class WriteCarAllocationOutputFilesOhio implements WriteCarAllocationOutp
     	String outputTripListFilename, String outputDisaggregateCarUseFileName, String outputProbCarChangeFileName,
     	String outputVehTypePurposeSummaryFileName, String outputVehTypePersTypeSummaryFileName, String outputVehTypeDistanceSummaryFileName,
     	List<HouseholdCarAllocation> hhCarAllocationResultsList, GeographyManager geogManager,
-    	SharedDistanceMatrixData sharedDistanceObject, SocioEconomicDataManager socec, ConstantsIf constants) {
+    	SharedDistanceMatrixData sharedDistanceObject, SocioEconomicDataManager socec, ConstantsIf constants, VehicleTypePreferences vehicleTypePreferences) {
 
 
         threhsoldRoundUp = Float.parseFloat(propertyMap.get(GlobalProperties.ROUND_UP_THRESHOLD.toString()));

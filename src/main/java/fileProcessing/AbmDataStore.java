@@ -75,7 +75,8 @@ public class AbmDataStore {
 		requiredHhField = Arrays.asList( 
 				propertyMap.get( AbmObjectTranslater.HH_NUM_AUTO_FIELD_KEY ),
 				propertyMap.get(AbmObjectTranslater.HH_MAZ_KEY),
-				propertyMap.get(AbmObjectTranslater.HH_CAR_TYPES_KEY),
+				propertyMap.get(AbmObjectTranslater.HH_VEH_FUEL_TYPES_KEY),
+				propertyMap.get(AbmObjectTranslater.HH_VEH_BODY_TYPES_KEY),
 				propertyMap.get(AbmObjectTranslater.HH_AV_FLAG_KEY),
 				propertyMap.get(AbmObjectTranslater.HH_ID_WO_SAMPLE_FIELD_KEY));
 		

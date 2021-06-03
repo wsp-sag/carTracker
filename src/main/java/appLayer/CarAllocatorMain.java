@@ -27,6 +27,7 @@ import algorithms.HhCarAllocator;
 import fileProcessing.AbmDataStore;
 import fileProcessing.GlobalProperties;
 import fileProcessing.ParameterReader;
+import fileProcessing.VehicleTypePreferences;
 import objectMapping.HhObjectMapper;
 import objects.HouseholdCarAllocation;
 import utility.ConstantsIf;
@@ -64,10 +65,15 @@ public class CarAllocatorMain {
         List<HouseholdCarAllocation> carAllocationResults = null;
         ParameterReader parameterInstance = ParameterReader.getInstance();
         parameterInstance.readParameters(parametersFile);
+        
+    	String filename = propertyMap.get("vehicle.type.preferences.filename");
+    	VehicleTypePreferences vehicleTypePreferences = new VehicleTypePreferences();
+    	vehicleTypePreferences.readPreferences( filename );
+    	        
         if(runDistributed)
-        	carAllocationResults = runCarAllocation_v2_distributed( propertyMap, logger, parameterInstance ,  geogManager, socec);
+        	carAllocationResults = runCarAllocation_v2_distributed( propertyMap, logger, parameterInstance ,  geogManager, socec, vehicleTypePreferences);
         else        	
-        carAllocationResults= runCarAllocation_v2_mono(propertyMap,logger,parameterInstance,  geogManager, socec);
+        carAllocationResults= runCarAllocation_v2_mono(propertyMap, logger, parameterInstance, geogManager, socec, vehicleTypePreferences);
         
         //if ( debugHhId >= 0 )
         //    debugCarAllocation_v2( propertyMap, logger, parametersFile, debugHhId, startOfDayMinute );       
@@ -95,7 +101,7 @@ public class CarAllocatorMain {
         	propertyMap.get("output.trip.file")+"_"+propertyMap.get("scenario.suffix.name")+".csv",
         	propertyMap.get("output.car.use.file")+"_"+propertyMap.get("scenario.suffix.name")+".csv",
         	outputProbCarChangeFileName, outputVehTypePurposeSummaryFileName, outputVehTypePersTypeSummaryFileName, outputVehTypeDistanceSummaryFileName,
-        	carAllocationResults, geogManager, sharedDistanceObject, socec, constants);
+        	carAllocationResults, geogManager, sharedDistanceObject, socec, constants, vehicleTypePreferences);
                 
         return null;
     }   
@@ -106,7 +112,7 @@ public class CarAllocatorMain {
 
 	
 	private List<HouseholdCarAllocation> runCarAllocation_v2_distributed( Map<String, String> propertyMap, 
-			Logger logger, ParameterReader parameterInstance, GeographyManager geogManager, SocioEconomicDataManager socec ) {
+			Logger logger, ParameterReader parameterInstance, GeographyManager geogManager, SocioEconomicDataManager socec, VehicleTypePreferences vehicleTypePreferences ) {
 		
 //        JPPFNodeForwardingMBean forwarder = null;
 //        NodeSelector masterSelector = null;
@@ -155,6 +161,8 @@ public class CarAllocatorMain {
         dataProvider.setParameter( "propertyMap", propertyMap );
         dataProvider.setParameter( "geographyManager", geogManager );
         dataProvider.setParameter( "socioEconomicDataManager", socec );
+        dataProvider.setParameter( "vehicleTypePreferences", vehicleTypePreferences );
+        
         
   		List<HouseholdCarAllocation> hhAllocationResultsList = new ArrayList<>();
         List<List<HouseholdCarAllocation>> lpFailedList = new ArrayList<>();
@@ -203,7 +211,7 @@ public class CarAllocatorMain {
 
 
 	private List<HouseholdCarAllocation> runCarAllocation_v2_mono( HashMap<String, String> propertyMap, Logger logger, ParameterReader parameterInstance, 
-			GeographyManager geogManager, SocioEconomicDataManager socec) {
+			GeographyManager geogManager, SocioEconomicDataManager socec, VehicleTypePreferences vehicleTypePreferences) {
 	
 		
 		int minHhId = Integer.valueOf( propertyMap.get( GlobalProperties.MIN_ABM_HH_ID_KEY.toString() ) );
@@ -211,7 +219,7 @@ public class CarAllocatorMain {
 		
 			
 		logger.info( System.getProperty("java.library.path"));
-	    CarAllocation carAllocation = new CarAllocation( parameterInstance, propertyMap, socec, geogManager );
+	    CarAllocation carAllocation = new CarAllocation( parameterInstance, propertyMap, socec, geogManager, vehicleTypePreferences );
 	    
 	    logger.info( "reading ABM data files ..." );
 	    AbmDataStore abmDataStore = new AbmDataStore( propertyMap );

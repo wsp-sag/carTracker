@@ -18,6 +18,7 @@ import accessibility.SocioEconomicDataManager;
 import fileProcessing.AbmDataStore;
 import fileProcessing.GlobalProperties;
 import fileProcessing.ParameterReader;
+import fileProcessing.VehicleTypePreferences;
 import objectMapping.HhObjectMapper;
 import objects.AbmDataVehicleIdMap;
 import objects.HouseholdCarAllocation;
@@ -65,13 +66,15 @@ public class CarAllocationTask extends AbstractTask<Object> implements Distribut
 
         GeographyManager geogManager = null;
         SocioEconomicDataManager socec = null;
+		VehicleTypePreferences vehicleTypePreferences = null;
         		
 		DataProvider dataProvider = getDataProvider();
 		HashMap<String, String> propertyMap = dataProvider.getParameter("propertyMap");
         ParameterReader parameterInstance = dataProvider.getParameter( "parameterInstance" );        
         geogManager = dataProvider.getParameter("geographyManager");
         socec = dataProvider.getParameter("socioEconomicDataManager");
-        CarAllocation carAllocation = new CarAllocation( parameterInstance,propertyMap, socec,geogManager );
+		vehicleTypePreferences = (VehicleTypePreferences)dataProvider.getParameter( "vehicleTypePreferences" );
+        CarAllocation carAllocation = new CarAllocation( parameterInstance,propertyMap, socec,geogManager,vehicleTypePreferences );
         
     	// get the hh info and log the report for the debugHhId
         AbmDataStore abmDataStore = new AbmDataStore( propertyMap );

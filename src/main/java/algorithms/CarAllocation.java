@@ -20,7 +20,7 @@ import com.google.ortools.linearsolver.MPVariable;
 import fileProcessing.GlobalProperties;
 import fileProcessing.ParameterReader;
 import fileProcessing.PurposeCategories;
-import fileProcessing.VehicleTypeCategories;
+import fileProcessing.VehicleTypePreferences;
 import fileProcessing.WorksheetWriter;
 import objects.AutoTrip;
 import objects.Household;
@@ -93,7 +93,7 @@ public class CarAllocation
 
 	private static final List<Integer> STUDENT_PERSON_TYPE_INDICES = Arrays.asList( PERSON_TYPE_UNIV_STUDENT, PERSON_TYPE_DRV_AGE_STUDENT );
 
-	private static final List<Integer> HOV_MODE_INDICES = Arrays.asList( HOV2_MODE, HOV3p_MODE );
+	//private static final List<Integer> HOV_MODE_INDICES = Arrays.asList( HOV2_MODE, HOV3p_MODE );
 
     public static final int START_SIMULATION_TIME = HhCarAllocator.MIN_SIMULATION_TIME;
 
@@ -195,7 +195,7 @@ public class CarAllocation
 	private SharedDistanceMatrixData sharedDistanceObject;
 	private HashMap<String,String> propertyMap;
 
-	private VehicleTypeCategories vehicleTypeCategories;
+	private VehicleTypePreferences vehicleTypePreferences;
 	
 	private float unsatisfiedDemandDistancePenalty = 0;
 	private float repositionCostPerMile = 0;
@@ -214,10 +214,11 @@ public class CarAllocation
     }
 
 
-    public CarAllocation( ParameterReader parameterInstance , HashMap<String,String> propertyMap,SocioEconomicDataManager socec, GeographyManager geogManager ) {
+    public CarAllocation( ParameterReader parameterInstance, HashMap<String,String> propertyMap, SocioEconomicDataManager socec, GeographyManager geogManager, VehicleTypePreferences vehicleTypePreferences ) {
     	this.propertyMap = propertyMap;
     	this.socec = socec;
     	this.geogManager = geogManager;
+    	this.vehicleTypePreferences = vehicleTypePreferences;
     	parkingScale = Float.parseFloat(propertyMap.get("longterm.parking.daily.scale"));
     	sharedDistanceObject= SharedDistanceMatrixData.getInstance(propertyMap, geogManager);
 
@@ -235,10 +236,6 @@ public class CarAllocation
 		logHhId= Integer.parseInt(propertyMap.get("log.report.hh.id"));
 		minimumActivityDuration= Float.parseFloat(propertyMap.get("min.activity.duration"));
 
-    	String filename = propertyMap.get("vehicle.type.definitions.filename");
-    	VehicleTypeCategories.createInstance(filename);
-    	vehicleTypeCategories = VehicleTypeCategories.getInstance();
-    	
     }
 
 
@@ -279,10 +276,6 @@ public class CarAllocation
 
     	try {
 
-    		int dummy = 0;
-    		if ( hh.getId() == 1568 )
-    			dummy = 1;
-    		
         	String name = null;
 
         	objective = solver.objective();
@@ -294,8 +287,9 @@ public class CarAllocation
 
         	int numAutos = hh.getNumAutos();
         	int homeMaz = hh.getHomeMaz();
-        	int[] hhCarTypes = hh.getHhCarTypes();
-        	
+        	int[] hhVehFuelTypes = hh.getHhVehFuelTypes();
+        	int[] hhVehBodyTypes = hh.getHhVehBodyTypes();
+
         	int homeTaz = geogManager.getMazTazValue(homeMaz);
 
         	float[] distanceFromHome = sharedDistanceObject.getOffpeakDistanceFromTaz(homeTaz);
@@ -380,14 +374,22 @@ public class CarAllocation
         				}
         			}
         			
-        			double[] disutils = {-1,0,0,0,0};
-        			int carType = hhCarTypes[j];
-        			String carSize = vehicleTypeCategories.getCarSize(carType);
+//        			double[] disutils = {-1,0,0,0,0};
+        			int fuelType = hhVehFuelTypes[j];
+        			int bodyType = hhVehBodyTypes[j];
         			
-        			double carAllocationPreference = (ESCORTING_PURPOSE_INDICES.contains(ad) ? 1 : 0)*disutils[1] +
-        							(HOV_MODE_INDICES.contains(aTrip.getMode()) ? 1 : 0)*disutils[2] +
-        							(carSize.equalsIgnoreCase(SMALL_CAR_SIZE) ? 1 : 0)*disutils[3] +
-        							(Math.pow(aTrip.getDistance(),2))*disutils[4];
+        			float udDisutil = vehicleTypePreferences.getUsualDriverDisutil( fuelType, bodyType );
+        			List<Float> purpDisutil = vehicleTypePreferences.getPurposeDisutil( fuelType, bodyType );
+        			List<Float> modeDisutil = vehicleTypePreferences.getModeDisutil( fuelType, bodyType );
+        			List<Float> drvPersTypeDisutil = vehicleTypePreferences.getDrvPersTypePrefDisutil( fuelType, bodyType );
+        			float distSqDisutil = vehicleTypePreferences.getDistanceSquaredDisutil( fuelType, bodyType );
+        			
+        			int dummy = 0;
+        			if ( ad < 0 || pt <= 0 || aTrip.getMode() <= 0 )
+        				dummy = 1;
+        			
+        			double carAllocationPreference = udDisutil + purpDisutil.get(ad) + modeDisutil.get(aTrip.getMode()-1) + 
+        							drvPersTypeDisutil.get(pt-1) + Math.pow(aTrip.getDistance(),2)*distSqDisutil;
         							
         			ofVarsIJ[INDEX_CarAllo ][i][j] = solver.makeIntVar( lowerBound, uppperBound, ( name = "CarAlloc_"+i+"_"+j ) );
                     objective.setCoefficient( ofVarsIJ[INDEX_CarAllo][i][j], -usualDrBonus*usualDrDummy + carAllocationPreference + (-0.0001*diffPnumAuto)); //j is added for singularity
