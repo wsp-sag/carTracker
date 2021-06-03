@@ -22,6 +22,7 @@ import jxl.Workbook;
 import jxl.WorkbookSettings;
 
 import java.io.File;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -34,9 +35,14 @@ import org.apache.log4j.Logger;
 /**
  * Reads an Excel vehicle type preferences file.
  */
-public class VehicleTypePreferences {
+public class VehicleTypePreferences implements Serializable {
 
-    // define fixed table dimensions and parameter sets
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
+	// define fixed table dimensions and parameter sets
     private static final int PREFERENCES_TAB = 0;
     
     private static final int NUM_PURPOSES = 9;
@@ -58,7 +64,6 @@ public class VehicleTypePreferences {
 	
     private Map<String,Map<String,Integer>> indexLookup = new HashMap<>();
     
-    private Logger logger = Logger.getLogger(VehicleTypePreferences.class);
             
 
 
@@ -150,6 +155,8 @@ public class VehicleTypePreferences {
 
     private void readValuesFromWorksheet( Workbook workbook ) {
 
+        Logger logger = Logger.getLogger(VehicleTypePreferences.class);
+    	
         Sheet sheet = workbook.getSheet( PREFERENCES_TAB );
         Cell cell;
         
