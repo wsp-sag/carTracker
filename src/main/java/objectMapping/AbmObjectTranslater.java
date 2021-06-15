@@ -72,6 +72,7 @@ public class AbmObjectTranslater {
 	public static final String HH_MAZ_KEY = "hh.maz.field";
 	public static final String HH_VEH_FUEL_TYPES_KEY = "hh.veh.fuel.types";
 	public static final String HH_VEH_BODY_TYPES_KEY = "hh.veh.body.types";
+	public static final String HH_VEH_NUMS_KEY = "hh.veh.nums";
 	public static final String HH_AV_FLAG_KEY="hh.av.flag.field";
 	public static final String PERSON_TYPE_FIELD_KEY = "person.type.field";
 	public static final String PERSON_USUAL_CAR_ID_FIELD_KEY = "person.usualcar.id.field";
@@ -89,6 +90,7 @@ public class AbmObjectTranslater {
 	public static final String TRIP_PLANNED_DISTANCE_FIELD_KEY = "trip.planned.distance.field";
 	public static final String TRIP_MODE_FIELD_KEY = "trip.mode.field";
 	public static final String TRIP_VOT_FIELD_KEY = "trip.vot.field";
+	public static final String TRIP_RECNUM_FIELD_KEY = "trip.recnum.field";
 	public static final String TRIP_ACTIVITY_DURATION_KEY = "abm.data.file.final.activity.duration";
 	public static final String NUM_AUTOS_FIELD_KEY = "hh.num.auto.field";
 	
@@ -117,12 +119,14 @@ public class AbmObjectTranslater {
 	private String tripModeField;
 	private String tripUserClassField;
 	private String tripVotField;
+	private String tripRecnumField;
 	private String minActDurationField;
 	private String actDurationField;
 	private String numAutosField;
 	private String homeMazField;
 	private String hhVehFuelTypesField;
 	private String hhVehBodyTypesField;
+	private String hhVehNumsField;
 	private String ifAvHhField;
 	private String hidAcrossSampleField;
 	private String usualCarIdField;
@@ -177,10 +181,12 @@ public class AbmObjectTranslater {
 		homeMazField = propertyMap.get(HH_MAZ_KEY);
 		hhVehFuelTypesField = propertyMap.get(HH_VEH_FUEL_TYPES_KEY);
 		hhVehBodyTypesField = propertyMap.get(HH_VEH_BODY_TYPES_KEY);
+		hhVehNumsField = propertyMap.get(HH_VEH_NUMS_KEY);
 		ifAvHhField= propertyMap.get(HH_AV_FLAG_KEY);
 		hidAcrossSampleField = propertyMap.get(HH_ID_WO_SAMPLE_FIELD_KEY);
 		usualCarIdField = propertyMap.get(PERSON_USUAL_CAR_ID_FIELD_KEY);
 		tripVotField = propertyMap.get(TRIP_VOT_FIELD_KEY);
+		tripRecnumField = propertyMap.get(TRIP_RECNUM_FIELD_KEY);
 		autoTripInfo = new ArrayList<Object>();
 		if ( numTripRecords > 0 ) {
 			
@@ -291,6 +297,9 @@ public class AbmObjectTranslater {
 				
 				String id = record.get( fieldIndexMap.get(tripIdField) );
 				uniqueTripIds[tripNum] = Integer.parseInt( id );
+				
+				String tripRecNum = record.get( fieldIndexMap.get(tripRecnumField) );
+				tripRecNums[tripNum] = Integer.valueOf(tripRecNum);
 				
 				String personNumValue = record.get( fieldIndexMap.get(tripPnumField) );
 				pnum = Integer.parseInt( personNumValue );
@@ -684,6 +693,7 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 			tripModes = (int[])tripInfo.get(5);
 			tripOrigMazs = (int[])tripInfo.get(10);
 			tripDestMazs = (int[])tripInfo.get(11);
+			tripRecNums = (int[])tripInfo.get(12);
 			tripDistances = (float[])tripInfo.get(13);
 			assignedTripModes = (int[])tripInfo.get(14);
 			tripVehIds = (int[])tripInfo.get(15);
@@ -757,7 +767,7 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 			personTripDistances[pnum][k] = tripDistances[index];
 			personAssignedTripModes[pnum][k] = assignedTripModes[index];
 
-			//personTripRecNums[pnum][k] = tripRecNums[index];
+			personTripRecNums[pnum][k] = tripRecNums[index];
 			personTripVehIds[pnum][k] = tripVehIds[index];
 			personLinkedToIds[pnum][k] = linkedToIds[index];
 			personJointDriverPnum[pnum][k] = jointDriverPnum[index];
@@ -924,7 +934,7 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 		
 	}
 
-	public int[][] getUsualCarIdArray( int hhid ) {
+	public int[] getUsualCarIdArray( int hhid ) {
 		
 		// get a map of file field numbers to tripRecord field positions
 		Map<String,Integer> fieldIndexMap = dataStore.getPersonFieldIndexMap();
@@ -932,12 +942,12 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 				
 		List<List<String>> personRecords = dataStore.getPersonRecords( hhid );
 		
-		int[][] usualCars = new int[ personRecords.size()+1 ][];
+		int[] usualCars = new int[ personRecords.size()+1 ];
 		
 		int pnum = 1;
 		for ( List<String> record : personRecords ) {
 			String usualCarIdFieldValue = record.get( persRecordIndex );
-			int[] usualCarsForPerson = Parsing.getOneDimensionalIntArrayValuesFromExportString(usualCarIdFieldValue );
+			int usualCarsForPerson = Integer.valueOf( usualCarIdFieldValue );
 			usualCars[pnum++] = usualCarsForPerson; 
 		}
 		
@@ -978,6 +988,24 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 		
 		int[] bodyTypes = Parsing.getOneDimensionalIntArrayValuesFromExportString( bodyTypesString );
 		return bodyTypes;
+		
+	}
+
+	public int[] getHhVehNums( int hhid ) {
+		
+		// get a map of file field numbers to tripRecord field positions
+		Map<String,Integer> fieldIndexMap = dataStore.getHhFieldIndexMap();
+		int vehNumFieldIndex = fieldIndexMap.get(hhVehNumsField);
+				
+		List<List<String>> hhecords = dataStore.getHouseholdRecords(hhid);
+		String vehNumString = "";
+	
+		for ( List<String> record : hhecords ) {
+			vehNumString = record.get( vehNumFieldIndex );
+		}
+		
+		int[] vehNums = Parsing.getOneDimensionalIntArrayValuesFromExportString( vehNumString );
+		return vehNums;
 		
 	}
 

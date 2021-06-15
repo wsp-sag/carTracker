@@ -335,7 +335,7 @@ public class CarAllocation
         		double parkCostSik = 0;
         		double parkCostGik = 0;
 
-        		int[] usualCarsForPerson = persons[aTrip.getPnum()].getUsualCarId();
+        		int personUsualCarId = persons[aTrip.getPnum()].getUsualCarId();
 
         		float[] distanceFromEndTrip = sharedDistanceObject.getOffpeakDistanceFromTaz(destTaz);
 
@@ -359,8 +359,9 @@ public class CarAllocation
 
 
         		// IJ Variables (trip and auto)
-        		for ( int j=0; j < numAutos; j++ )     {
-        			int usualDrDummy = usualCarsForPerson[j];
+        		for ( int j=0; j < numAutos; j++ ) {
+        			
+        			int usualDrDummy = personUsualCarId > 0 ? 1 : 0;
 
         			float diffPnumAuto = Math.abs(j-aTrip.getPnum());
         			// F6
@@ -388,12 +389,20 @@ public class CarAllocation
         			if ( ad < 0 || pt <= 0 || aTrip.getMode() <= 0 )
         				dummy = 1;
         			
-        			double carAllocationPreference = udDisutil + purpDisutil.get(ad) + modeDisutil.get(aTrip.getMode()-1) + 
-        							drvPersTypeDisutil.get(pt-1) + Math.pow(aTrip.getDistance(),2)*distSqDisutil;
+        			double carAllocationPreference = 0;
+					try {
+						carAllocationPreference = udDisutil + purpDisutil.get(ad) + modeDisutil.get(aTrip.getMode()-1) + 
+										drvPersTypeDisutil.get(pt-1) + Math.pow(aTrip.getDistance(),2)*distSqDisutil;
+					} catch (Exception e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
         							
-        			ofVarsIJ[INDEX_CarAllo ][i][j] = solver.makeIntVar( lowerBound, uppperBound, ( name = "CarAlloc_"+i+"_"+j ) );
-                    objective.setCoefficient( ofVarsIJ[INDEX_CarAllo][i][j], -usualDrBonus*usualDrDummy + carAllocationPreference + (-0.0001*diffPnumAuto)); //j is added for singularity
-                    ofCoeffList.add( (float) (-usualDrBonus*usualDrDummy +(-0.0001*diffPnumAuto)));
+					int vehTypeCategory = vehicleTypePreferences.getCategory(fuelType, bodyType);
+
+	            	ofVarsIJ[INDEX_CarAllo ][i][j] = solver.makeIntVar( lowerBound, uppperBound, ( name = "CarAlloc_"+i+"_"+j ) );
+                    objective.setCoefficient( ofVarsIJ[INDEX_CarAllo][i][j], -usualDrBonus*usualDrDummy + carAllocationPreference + (-0.0001*diffPnumAuto) + (-0.00001*vehTypeCategory)); //j is added for singularity
+                    ofCoeffList.add( (float) (-usualDrBonus*usualDrDummy + carAllocationPreference + (-0.0001*diffPnumAuto) + (-0.00001*vehTypeCategory)));
             		variableNameList.add( name );
             		//ofVarsIJ[INDEX_CarAllo ][i][j].setInteger(true);
             		//F2

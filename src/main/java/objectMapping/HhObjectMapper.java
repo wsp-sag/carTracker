@@ -34,12 +34,13 @@ public class HhObjectMapper implements HhObjectMapperIf {
 		
 
     	int[] personTypes = abmData.getPersonTypeArray( hhid );
-    	int[][] usualCarIds = abmData.getUsualCarIdArray( hhid );
+    	int[] usualCarIds = abmData.getUsualCarIdArray( hhid );
     	int numHhMembers = personTypes.length - 1;
     	int numAutos = abmData.getNumAutos(hhid);
     	int homeMaz = abmData.getHomeMaz(hhid);
     	int[] hhVehFuelTypes = abmData.getHhVehFuelTypes(hhid);
     	int[] hhVehBodyTypes = abmData.getHhVehBodyTypes(hhid);
+    	int[] hhVehNums = abmData.getHhVehNums(hhid);
     	int ifAvHh= abmData.getIfAvHousehold(hhid);
     	int hidAcrossSample = abmData.getHidAcrossSample(hhid);
     	int[] numTrips = abmData.getPersonTripCount( hhid );
@@ -127,6 +128,7 @@ public class HhObjectMapper implements HhObjectMapperIf {
     	hh.setPersonTripRecordIds( personTripRecordIds );
     	hh.setHhVehFuelTypes( hhVehFuelTypes );
     	hh.setHhVehBodyTypes( hhVehBodyTypes );
+    	hh.setHhVehNums( hhVehNums );
     	
 		return hh;		
 

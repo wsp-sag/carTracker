@@ -15,15 +15,16 @@ import objectMapping.AbmObjectTranslater;
 
 public class AbmDataReader {
 
+	private static final String REGEX = ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)|(?<=\\[)|(?=\\])";	
 	
     public static Map<Integer, List<List<String>>> getValuesFromCsvFileForHhIdsAndFields( String filename, String hhIdLabel, Map<String,Integer> fieldIndexMap, int minRange, int maxRange, List<String> headerMap) {
-    	
+
     	Map< Integer, List<List<String>> > resultMap = new HashMap< Integer, List<List<String>> >();
             	
     	try {
     		
 	        // open the input stream
-	        String delimSet = ",";
+	        String delimSet = REGEX;
 	        BufferedReader inStream = null;
 	        try {
 	            inStream = new BufferedReader(new FileReader(new File(filename)));
@@ -37,20 +38,17 @@ public class AbmDataReader {
 	        
 	        // read the field names from the header record to get the field index for the hhIdLabel
 	        String line = inStream.readLine();
-            StringTokenizer st = new StringTokenizer( line, delimSet );
+            //StringTokenizer st = new StringTokenizer( line, delimSet );
             
-            int index = 0;
+	        List<String> myFieldValues = getFieldValuesFromLine( line );
+	        
             int hhIdIndex = -1;
-            while ( st.hasMoreTokens() ) {
-            	
-            	String name = st.nextToken().trim();
-            	
-            	if ( name.equalsIgnoreCase( hhIdLabel ) ) {
-            		hhIdIndex = index;
-            		break;
-            	}
-            	
-            	index++;
+            Map<String,Integer> headerFieldIndices = new HashMap<>();
+            for ( int i=0; i < myFieldValues.size(); i++ ) {
+            	String name = myFieldValues.get(i);
+            	if ( name.equalsIgnoreCase( hhIdLabel ) )
+            		hhIdIndex = i;            	
+            	headerFieldIndices.put(name, i);
             	
             }
 
@@ -58,7 +56,6 @@ public class AbmDataReader {
             List<String> fieldValues = null;
         	List<List<String>> returnValues = null;
             
-        	int hhIdValue = -1;
         	int oldHhId = -1;
         	
         	int recnum = 0;
@@ -67,12 +64,16 @@ public class AbmDataReader {
             while ( ( line = inStream.readLine() ) != null ) {
 
             	recnum++;
-                st = new StringTokenizer( line, delimSet );
+            	
+            	
+                //st = new StringTokenizer( line, delimSet );
+    	        myFieldValues = getFieldValuesFromLine( line );
+    	        int hhIdValue = Integer.valueOf( myFieldValues.get(hhIdIndex) );
                 
-	        	hhIdValue = -1;
-	        	for ( int i=0; i < hhIdIndex; i++ )
-                    st.nextToken();
-                hhIdValue = Integer.parseInt( st.nextToken() );
+//	        	hhIdValue = -1;
+//	        	for ( int i=0; i < hhIdIndex; i++ )
+//                    st.nextToken();
+//                hhIdValue = Integer.parseInt( st.nextToken() );
                 
                 if ( hhIdValue >= minRange ) {
 
@@ -82,64 +83,66 @@ public class AbmDataReader {
 
                 	Map<Integer,String> valuesMap = new HashMap<>();
                 	
-                    st = new StringTokenizer( line, delimSet );
-                    int fieldIndex = 0;
-                    int fieldIndexAll = 0;
-                    Integer valuesIndex = null;
-                    int stringValueIndex = 0;
-                    while ( st.hasMoreTokens() && valuesMap.size() < fieldIndexMap.size() ) {
+                    //st = new StringTokenizer( line, delimSet );
+                    //int fieldIndex = 0;
+                    //int fieldIndexAll = 0;
+                    //Integer valuesIndex = null;
+                    //int stringValueIndex = 0;
+                    //while ( st.hasMoreTokens() && valuesMap.size() < fieldIndexMap.size() ) {
+                    for ( String colName : fieldIndexMap.keySet() ) {
 
-                    	String fieldString = st.nextToken();
+                    	int fieldIndex = fieldIndexMap.get(colName);
+                    	int headerFieldIndex = headerFieldIndices.get(colName);
                     	
-                    	// skip fields from the file that were not included in the fieldIndexMap
-                    	String colName = headerMap.get(stringValueIndex);
+                    	//String fieldString = st.nextToken();
+                    	String fieldValue = myFieldValues.get(headerFieldIndex);
                     	
-                    	if(fieldIndexMap.containsKey(colName)){
-                    		fieldIndex = fieldIndexMap.get(colName);
-                    		stringValueIndex++;
-                    		fieldIndexAll++;
-                    	}
-                    	else{
-                    		stringValueIndex++;
-                    		continue;
-                    		
-                    	}                   	
-                    	
-                    	
-                    	
-                    	String fieldValue = fieldString.trim();
-                    	
-                    	if ( fieldValue.startsWith("\"") ) {
-                    		
-                        	if ( ! fieldValue.endsWith("\"") ) {
-                        		String tempValue = fieldValue;   
-                        		tempValue = st.nextToken().trim();
-                            	while ( ! tempValue.endsWith("\"") ) {
-                            		fieldValue += "," + tempValue;
-                            		tempValue = st.nextToken().trim();
-                            	}
-                        		fieldValue += "," + tempValue;
-                        	}
-
-                        	// finally, remove the beginning "[ " and ending " ]" from the String
-                       		fieldValue = fieldValue.substring( 2, fieldValue.length()-2 );
-
-                    	}
+//                    	// skip fields from the file that were not included in the fieldIndexMap
+//                    	
+//                    	if(fieldIndexMap.containsKey(colName)){
+//                    		fieldIndex = fieldIndexMap.get(colName);
+//                    		stringValueIndex++;
+//                    		fieldIndexAll++;
+//                    	}
+//                    	else{
+//                    		stringValueIndex++;
+//                    		continue;
+//                    		
+//                    	}                   	
+//                    	
+//                    	
+//                    	String fieldValue = fieldString.trim();
+//                    	
+//                    	if ( fieldValue.startsWith("\"") ) {
+//                    		
+//                        	if ( ! fieldValue.endsWith("\"") ) {
+//                        		String tempValue = fieldValue;   
+//                        		tempValue = st.nextToken().trim();
+//                            	while ( ! tempValue.endsWith("\"") ) {
+//                            		fieldValue += "," + tempValue;
+//                            		tempValue = st.nextToken().trim();
+//                            	}
+//                        		fieldValue += "," + tempValue;
+//                        	}
+//
+//                        	// finally, remove the beginning "[ " and ending " ]" from the String
+//                       		fieldValue = fieldValue.substring( 2, fieldValue.length()-2 );
+//
+//                    	}
 
                     	valuesMap.put( fieldIndex, fieldValue );
                     	
     	        	}
                 	
                 	//valuesIndex = headerMap.indexOf(fieldIndexMap.get(fieldIndex));
-                    fieldIndexAll++;
-                	valuesMap.put( fieldIndexAll, String.valueOf( recnum ) );
+                    //fieldIndexAll++;
+                	valuesMap.put( valuesMap.size(), String.valueOf( recnum ) );
 
-                	
                     if ( hhIdValue == oldHhId ) {
 
                     	fieldValues = new ArrayList<String>();
-                    	for ( int i=0; i < valuesMap.size(); i++ )
-                    		fieldValues.add( valuesMap.get(i) );
+                    	for ( String value : valuesMap.values() )
+                    		fieldValues.add( value );
                         returnValues.add( fieldValues);
                         
                     }
@@ -150,8 +153,8 @@ public class AbmDataReader {
                     	
                     	returnValues = new ArrayList<List<String>>();
                     	fieldValues = new ArrayList<String>();
-                    	for ( int i=0; i < valuesMap.size(); i++ )
-                    		fieldValues.add( valuesMap.get(i) );
+                    	for ( String value : valuesMap.values() )
+                    		fieldValues.add( value );
                         returnValues.add( fieldValues);
 
                     	oldHhId = hhIdValue;
@@ -358,7 +361,7 @@ public class AbmDataReader {
             // read the data records and extract the values for the columns desired
             while ( ( line = inStream.readLine() ) != null ) {
 
-            	StringTokenizer st = new StringTokenizer( line, delimSet );
+            	StringTokenizer st = new StringTokenizer( line.replace("\"",""), delimSet );
     	        int count = 0;
     	        int numValues = 0;
                 while ( st.hasMoreTokens() ) {
@@ -374,22 +377,22 @@ public class AbmDataReader {
                 	                	
                 	String fieldValue = fieldString.trim();
                 	
-                	if ( fieldValue.startsWith("\"") ) {
-                		
-                    	if ( ! fieldValue.endsWith("\"") ) {
-                    		String tempValue = fieldValue;   
-                    		tempValue = st.nextToken().trim();
-                        	while ( ! tempValue.endsWith("\"") ) {
-                        		fieldValue += "," + tempValue;
-                        		tempValue = st.nextToken().trim();
-                        	}
-                    		fieldValue += "," + tempValue;
-                    	}
-
-                    	// finally, remove the beginning "[ " and ending " ]" from the String
-                   		fieldValue = fieldValue.substring( 2, fieldValue.length()-2 );
-
-                	}
+//                	if ( fieldValue.startsWith("\"") ) {
+//                		
+//                    	if ( ! fieldValue.endsWith("\"") ) {
+//                    		String tempValue = fieldValue;   
+//                    		tempValue = st.nextToken().trim();
+//                        	while ( ! tempValue.endsWith("\"") ) {
+//                        		fieldValue += "," + tempValue;
+//                        		tempValue = st.nextToken().trim();
+//                        	}
+//                    		fieldValue += "," + tempValue;
+//                    	}
+//
+//                    	// finally, remove the beginning "[ " and ending " ]" from the String
+//                   		fieldValue = fieldValue.substring( 2, fieldValue.length()-2 );
+//
+//                	}
                 	
                 	
            			indexValueMap.put( count, fieldValue );
@@ -471,5 +474,15 @@ public class AbmDataReader {
     	
     }
 
-    	
+
+    private static List<String> getFieldValuesFromLine( String line ) {
+    	List<String> fieldValues = new ArrayList<>();
+    	String[] lineItems = line.split(REGEX);
+    	for ( String item : lineItems ) { 
+    		if( item.equals("\"[") || item.equals("]\"") )
+    			continue;
+    		fieldValues.add( item.trim() );
+    	}
+    	return fieldValues;
+    }
 }

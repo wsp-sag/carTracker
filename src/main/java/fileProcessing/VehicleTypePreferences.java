@@ -47,7 +47,7 @@ public class VehicleTypePreferences implements Serializable {
     
     private static final int NUM_PURPOSES = 9;
     private static final int NUM_MODES = 3;
-    private static final int NUM_DRIVER_PERSON_TYPES = 6;
+    private static final int NUM_PERSON_TYPES = 8;
 
     private static final String[] FUEL_TYPE_NAMES = { "", "no veh", "gd", "hyb", "ev" };
     private static final String[] BODY_TYPE_NAMES = { "", "mc", "lev", "car", "suv", "van", "ldt" };
@@ -231,7 +231,7 @@ public class VehicleTypePreferences implements Serializable {
 
             // driver person types
             tempList = new ArrayList<>();
-            for ( int i=0; i < NUM_DRIVER_PERSON_TYPES; i++ ) {
+            for ( int i=0; i < NUM_PERSON_TYPES; i++ ) {
                 cell = sheet.getCell( col, row );
                 cellContent = cell.getContents().trim();
                 tempList.add( cellContent.length() == 0 ? 0 : Float.valueOf(cellContent) );

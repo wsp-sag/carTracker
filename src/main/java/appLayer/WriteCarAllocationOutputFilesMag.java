@@ -43,7 +43,9 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	private static final double[] distanceBoundaries = { 2.0, 5.0, 10.0, 20.0, 30.0, 50.0, 75.0, 100.0, 9999 };
 	private static final String[] distanceBins = { "0-2", "2-5", "5-10", "10-20", "20-30", "30-50", "50-75", "75-100", "100+" };
 	private static final String[] modes = { "sov", "hov2", "hov3+" };
-	
+
+	private static final int TAXI_TNC_MODE_INDEX = 4;
+
     public static float threhsoldRoundUp = 0.7f;
 	private float tripExpansionFactor = 1.0f;
 		
@@ -198,10 +200,10 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
       PrintWriter outStreamDistSummary = null;
 	    try {
 	    	outStreamTrip = new PrintWriter( new BufferedWriter( new FileWriter( outputTripListFilename ) ) );
-	        String header1 = "hhid,pnum,tripid,tripRecNum,mode,vehId,vehFuelType,vehBodyType,origPurp,destPurp,origMaz,destMaz,origTaz,destTaz,distanceFromHome,plannedDepartureTime,departureEarly,departureLate,finalDeparture, finalArrival,x1,x2,x3,x4,unsatisfiedResult,numIterationIntegerizing";
+	        String header1 = "hhid,pnum,tripid,tripRecNum,mode,hhAutoId,vehNum,vehTypeCategory,vehFuelType,vehBodyType,origPurp,destPurp,origMaz,destMaz,origTaz,destTaz,tripDistance,tripDistanceFromHome,tripDistanceToHome,plannedDepartureTime,departureEarly,departureLate,finalDeparture, finalArrival,x1,x2,x3,x4,unsatisfiedResult,numIterationIntegerizing";
 	        outStreamTrip.println( header1 );   
 	        outStreamCar = new PrintWriter( new BufferedWriter( new FileWriter( outputDisaggregateCarUseFileName ) ) );
-	        String header2 = "hhid,carId,aVStatus,autoTripId,autoHhTripId,driverId,origPurp,destPurp,origMaz,destMaz,origTaz,destTaz,carRepositionType,origHome,destHome,tripDistance,distanceFromHomeToOrig,distanceFromHomeToDest,plannedDeparture,finalDeparture,finalArrival,departureEarly,departureLate,parkDurationAtDestination,ParkCostAtDestination,parkDurationAtNextOrigin,parkCostAtNextOrigin";
+	        String header2 = "totalDemand,hhid,carId,aVStatus,autoTripId,autoHhTripId,tripRecNum,tripVehNum,driverId,origPurp,destPurp,origMaz,destMaz,origTaz,destTaz,tripMode,finalMode,carRepositionType,origHome,destHome,tripDistance,distanceFromHomeToOrig,distanceFromHomeToDest,plannedDeparture,finalDeparture,finalArrival,departureEarly,departureLate,parkDurationAtDestination,ParkCostAtDestination,parkDurationAtNextOrigin,parkCostAtNextOrigin";
 	        outStreamCar.println( header2 );   
 	        outStreamHh = new PrintWriter( new BufferedWriter( new FileWriter( outputProbCarChangeFileName ) ) );
 	        String header3 = "hhid,hidAcrossSample,prevIterationCarChangeProb,probCarOwnershipChange,msaFactor";
@@ -249,6 +251,8 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	    double addCarFactor = Double.parseDouble(propertyMap.get("add.car.factor"));
 	    double subtractCarFactor = Double.parseDouble(propertyMap.get("subtract.car.factor"));
 	    
+		int taxiModeCode = Integer.parseInt(propertyMap.get("taxi.mode.code"));
+
 	    
 	    float msaFactor = 1.0f/globalLoop;
 	    
@@ -263,7 +267,7 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	        List<AutoTrip> aTrips = hh.getAutoTrips();
 	        int numAuto = hh.getNumAutos();
 	        
-	        if(numAuto > 0 && numAuto < hh.getPersons().length   )
+	        if(numAuto > 0 && numAuto < hh.getPersons().length )
 	        	carSufficiencyLevel = 0;
 	        else if(numAuto > 0 && numAuto == hh.getPersons().length   )
 	        	carSufficiencyLevel = 1;
@@ -273,6 +277,7 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	        int homeMaz = hh.getHomeMaz();
         	int[] hhVehFuelTypes = hh.getHhVehFuelTypes();
         	int[] hhVehBodyTypes = hh.getHhVehBodyTypes();
+        	int[] hhVehNums = hh.getHhVehNums();
 	    	
 	    	int homeTaz = geogManager.getMazTazValue(homeMaz);
 	    	
@@ -328,18 +333,25 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	            float finalArrival = finalDeparture + trip.getSchedTime();
 	            int origTaz = geogManager.getMazTazValue(trip.getOrigMaz());
 	            int destTaz = geogManager.getMazTazValue(trip.getDestMaz());
+	            float tripDistance = trip.getDistance();
 	            float tripDistanceFromHome = distanceFromHome[geogManager.getMazTazValue(trip.getDestMaz())];
+	            float tripDistanceToHome = distanceToHome[geogManager.getMazTazValue(trip.getDestMaz())];
 	            int tripVehFuelType = -1;
 	            int tripVehBodyType = -1;
+	            int tripVehNum = -1;
 	            int tripVehTypeCategory = -1;
 	            if ( trip.getVehId() > 0 ) {
 	            	tripVehFuelType = hhVehFuelTypes[ trip.getVehId()-1 ];
 	            	tripVehBodyType = hhVehBodyTypes[ trip.getVehId()-1 ];
+	            	tripVehNum = hhVehNums[ trip.getVehId()-1 ];
 	            	tripVehTypeCategory = vehicleTypePreferences.getCategory(tripVehFuelType, tripVehBodyType);
 	            }
 	            String record = hh.getId()+","+ trip.getPnum()+","+ trip.getUniqueTripId()+","+ trip.getTripRecNum()+","+trip.getMode()+","+
-	                    		trip.getVehId()+","+tripVehFuelType+","+tripVehBodyType+","+trip.getOrigAct()+","+ trip.getDestAct()+","+ trip.getOrigMaz()+","+ trip.getDestMaz()+","+ origTaz + ","+ destTaz+","+tripDistanceFromHome+","+trip.getSchedDepart()+","+ depEarly+","+ depLate +","+finalDeparture+","+finalArrival+","+
-	                    		xij[0]+","+xij[1]+","+xij[2]+","+xij[3] + ","+ unsatisRes + ","+ depArrObj.getNumIterationsForIntegerizing();
+            		trip.getVehId()+","+tripVehNum+","+tripVehTypeCategory+","+tripVehFuelType+","+tripVehBodyType+","+
+    				trip.getOrigAct()+","+ trip.getDestAct()+","+trip.getOrigMaz()+","+ trip.getDestMaz()+","+ origTaz + ","+ destTaz+","+
+    				tripDistance+","+tripDistanceFromHome+","+tripDistanceToHome+","+
+            		trip.getSchedDepart()+","+ depEarly+","+ depLate +","+finalDeparture+","+finalArrival+","+
+            		xij[0]+","+xij[1]+","+xij[2]+","+xij[3] + ","+ unsatisRes + ","+ depArrObj.getNumIterationsForIntegerizing();
 	                    
 	            outStreamTrip.println( record );     
 	            int period = getTripTablePeriod(CommonProcedures.convertMinutesToInterval(trip.getSchedDepart()+depLate-depEarly, constants), periodIntervals);
@@ -355,7 +367,7 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	            	int vtIndex = vehTypeIndexMap.get(tripVehTypeCategory);
 	            	int purpIndex = purposeIndexMap.get(trip.getDestAct());
 	            	int ptIndex = hh.getPersons()[trip.getPnum()].getPersonType();
-	            	int distBin = getDistanceBinIndex(tripDistanceFromHome);
+	            	int distBin = getDistanceBinIndex(tripDistance);
 	            	int modeIndex = trip.getMode()-1;
 	            	tripsByVehTypeByPurpose[modeIndex][vtIndex][purpIndex]++;
 	            	tripsByVehTypeByPersonType[modeIndex][vtIndex][ptIndex]++;
@@ -365,7 +377,7 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	        }
 	        
 	        
-	        int ifAvHh = hh.getIfAvHousehold();
+			int ifAvHh = hh.getIfAvHousehold();
 	        totalCars+=numAuto;
 	        if(ifAvHh == 1){
 	        	totalAVCars+=numAuto;
@@ -390,9 +402,16 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	    		int origTaz = geogManager.getMazTazValue(origMaz);
 	    		int destTaz = geogManager.getMazTazValue(destMaz);      		
 	    		
+	    		Trip hhTrip = trips.get(hhTripId);
+	    		int tripRecNum = hhTrip.getTripRecNum();
+	    		
 	    		float tripDistance = trip.getDistance();
 	    		
 	    		int tripMode = trip.getMode();
+	    		int tripVehNum = -1;
+	            if ( hhTrip.getVehId() > 0 ) {
+	            	tripVehNum = hhVehNums[ hhTrip.getVehId()-1 ];
+	            }
 	    		
 	        	double[] carAllocationForTrip = carAllocationResults[CarAllocation.INDEX_CarAllo][i];
 	        	double[] carAllocationFirstTrip = carAllocationResults[CarAllocation.INDEX_FirstCarTrip][i];
@@ -454,11 +473,14 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	            			tripDistanceFromHomeToOrig = distanceFromHome[homeTaz];
 	            			destHome = trip.getOrigAct() == PurposeCategories.HOME.getIndex() ? 1 : 0;
 	            			origHome = 1;
-	            			record = hh.getId()+","+
+	            			record = totalDemand+","+
+	            					hh.getId()+","+
 	            					(j+1)+","+
 	            					ifAvHh+","+
 	            					autoTripID +","+
 	            					0+","+
+	            					0+","+
+	            					tripVehNum+","+
 	            					0+","+
 	            					0+","+
 	            					TRIP_REPOSITIONING_PURPOSE+","+
@@ -466,6 +488,8 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	            					trip.getOrigMaz()+","+
 	            					geogManager.getMazTazValue(hh.getHomeMaz())+","+
 	            					geogManager.getMazTazValue(trip.getOrigMaz())+","+
+	            					"-1"+","+
+	            					emptyTripMode+","+
 	            					"-1"+","+
 	            					origHome+","+
 	            					destHome+","+
@@ -506,11 +530,14 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	            		tripDistanceFromHomeToOrig = distanceFromHome[geogManager.getMazTazValue(trip.getOrigMaz())];
 	            		destHome = trip.getDestAct() == PurposeCategories.HOME.getIndex() ? 1 : 0;
 	            		origHome = trip.getOrigAct() == PurposeCategories.HOME.getIndex() ? 1 : 0;
-	        			record = hh.getId()+","+
+            			record = totalDemand+","+
+            					hh.getId()+","+
 	        					(j+1)+","+
 	        					ifAvHh+","+
 	        					autoTripID +","+
 	        					(hhTripId+1)+","+
+            					tripRecNum+","+
+            					tripVehNum+","+
 	        					trip.getPnum()+","+
 	        					trip.getOrigAct()+","+
 	        					trip.getDestAct()+","+
@@ -518,6 +545,8 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	        					trip.getDestMaz()+","+
 	        					geogManager.getMazTazValue(trip.getOrigMaz())+","+
 	        					geogManager.getMazTazValue(trip.getDestMaz())+","+
+            					tripMode+","+
+            					tripMode+","+
 	        					carRepoType  + ","+
 	        					origHome+","+
 	        					destHome  + ","+
@@ -576,11 +605,14 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	                			tripDistanceFromHomeToOrig = distanceFromHome[geogManager.getMazTazValue(trip.getDestMaz())];
 	                			//tripDistanceFromHome = distanceFromHome[nextOrigTaz];
 	                			//tripDistanceFromHomeToOrig = distanceFromHome[destTaz];
-	        					record = hh.getId()+","+
+		            			record = totalDemand+","+
+    	            					hh.getId()+","+
 	                					(j+1)+","+
 	                					ifAvHh+","+
 	                					autoTripID +","+
 	                					0+","+
+	                					0+","+
+		            					tripVehNum+","+
 	                					0+","+
 	                					trip.getDestAct()+","+
 	                					TRIP_REPOSITIONING_PURPOSE+","+
@@ -590,6 +622,8 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 		            					geogManager.getMazTazValue(nextTrip.getOrigMaz())+","+
 	                					//origTaz+","+
 	                					//nextOrigTaz+","+
+	                					"-1"+","+
+		            					emptyTripMode+","+
 	                					"-1"+","+
 	                					origHome+","+
 	                					destHome+","+
@@ -633,11 +667,14 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	                			tripDistanceFromHomeToOrig = distanceFromHome[destTaz];
 	                			destHome = 1;
 	                			origHome = trip.getDestAct() == PurposeCategories.HOME.getIndex() ? 1 : 0;
-	        					record = hh.getId()+","+
+		            			record = totalDemand+","+
+    	            					hh.getId()+","+
 	                					(j+1)+","+
 	                					ifAvHh+","+
 	                					autoTripID +","+
 	                					0+","+
+	                					0+","+
+		            					tripVehNum+","+
 	                					0+","+
 	                					trip.getDestAct()+","+
 	                					TRIP_REPOSITIONING_PURPOSE+","+
@@ -645,6 +682,8 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	                					hh.getHomeMaz()+","+
 	                					geogManager.getMazTazValue(trip.getDestMaz())+","+
 	                					geogManager.getMazTazValue(hh.getHomeMaz())+","+
+	                					"-1"+","+
+		            					emptyTripMode+","+
 	                					"-1"+","+
 	                					origHome+","+
 	                					destHome+","+
@@ -686,58 +725,64 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	                			tripDistanceFromHomeToOrig = distanceFromHome[homeTaz];
 	                			destHome = nextTrip.getOrigAct() == PurposeCategories.HOME.getIndex() ? 1 : 0;
 	                			origHome = 1;
-	                			record = hh.getId()+","+
-	                    					(j+1)+","+
-	                    					ifAvHh+","+
-	                    					autoTripID +","+
-	                    					(i+1)+","+
-	                    					0+","+
-	                    					0+","+
-	                    					TRIP_REPOSITIONING_PURPOSE+","+
-	                    					hh.getHomeMaz()+","+
-	                    					nextTrip.getOrigMaz()+","+
-	                    					geogManager.getMazTazValue(hh.getHomeMaz())+","+
-	                    					geogManager.getMazTazValue(nextTrip.getOrigMaz())+","+
-	                    					"-1"+","+
-	                    					origHome+","+
-	                    					destHome+","+
-	                    					autoRecordDistance + ","+
-	                    					tripDistanceFromHomeToOrig+ ","+
-	                    					tripDistanceFromHome+","+
-	                    					departureTime+","+
-	                    					departureTime+","+
-	                    					(nextTrip.getSchedDepart() +  nextDepLate - nextDepEarly) +","+
-	                    					0+","+
-	                    					0;
-	                    			outStreamCar.println( record );  
-	                    			autoTripID++;
-	                    			
-	                    			totalAutoTrips++;
-	                    			totalVMT+=autoRecordDistance;
-	                    			if(ifAvHh == 1){
-	                    				totalAutoAVTrips++;
-	                    				totalEmptyTripsAV++;
-	                    				totalAVVMT+=autoRecordDistance;
-	                    				emptyAVVMT+=autoRecordDistance;
-	                    			}
-	                    			else{
-	                    				totalAutoNonAVTrips++;                			
-	                    			}
+		            			record = totalDemand+","+
+    	            					hh.getId()+","+
+                    					(j+1)+","+
+                    					ifAvHh+","+
+                    					autoTripID +","+
+                    					//(i+1)+","+
+                    					0+","+
+                    					0+","+
+    	            					tripVehNum+","+
+	                					0+","+
+                    					0+","+
+                    					TRIP_REPOSITIONING_PURPOSE+","+
+                    					hh.getHomeMaz()+","+
+                    					nextTrip.getOrigMaz()+","+
+                    					geogManager.getMazTazValue(hh.getHomeMaz())+","+
+                    					geogManager.getMazTazValue(nextTrip.getOrigMaz())+","+
+	                					"-1"+","+
+    	            					emptyTripMode+","+
+                    					"-1"+","+
+                    					origHome+","+
+                    					destHome+","+
+                    					autoRecordDistance + ","+
+                    					tripDistanceFromHomeToOrig+ ","+
+                    					tripDistanceFromHome+","+
+                    					departureTime+","+
+                    					departureTime+","+
+                    					(nextTrip.getSchedDepart() +  nextDepLate - nextDepEarly) +","+
+                    					0+","+
+                    					0;
+                    			outStreamCar.println( record );  
+                    			autoTripID++;
+                    			
+                    			totalAutoTrips++;
+                    			totalVMT+=autoRecordDistance;
+                    			if(ifAvHh == 1){
+                    				totalAutoAVTrips++;
+                    				totalEmptyTripsAV++;
+                    				totalAVVMT+=autoRecordDistance;
+                    				emptyAVVMT+=autoRecordDistance;
+                    			}
+                    			else{
+                    				totalAutoNonAVTrips++;                			
+                    			}
 
-	                    			period = getTripTablePeriod(CommonProcedures.convertMinutesToInterval(departureTime, constants), periodIntervals); 
+                    			period = getTripTablePeriod(CommonProcedures.convertMinutesToInterval(departureTime, constants), periodIntervals); 
 
-	                    			if(!ifExternalStationsIncluded ||(!ArrayUtils.contains(geogManager.getExternalStations(),geogManager.getMazTazValue(hh.getHomeMaz())) && !ArrayUtils.contains(geogManager.getExternalStations(),geogManager.getMazTazValue(nextTrip.getOrigMaz())))) {
-  		                				if ( separateCavFiles )
-  		                					cavTripTables[period][(emptyTripMode-1)*numberOfVotCategories+(emptyCarVotCat-1)][tazIndices[geogManager.getMazTazValue(hh.getHomeMaz())]][tazIndices[geogManager.getMazTazValue(nextTrip.getOrigMaz())]] += tripExpansionFactor;
-  		                				else
-  		                					nonCavTripTables[period][(emptyTripMode-1)*numberOfVotCategories+(emptyCarVotCat-1)][tazIndices[geogManager.getMazTazValue(hh.getHomeMaz())]][tazIndices[geogManager.getMazTazValue(nextTrip.getOrigMaz())]] += tripExpansionFactor;
-	                    			}
-	                    			
-	                    			break;
-	                			}
-	        				
-	        				}
-	        		
+                    			if(!ifExternalStationsIncluded ||(!ArrayUtils.contains(geogManager.getExternalStations(),geogManager.getMazTazValue(hh.getHomeMaz())) && !ArrayUtils.contains(geogManager.getExternalStations(),geogManager.getMazTazValue(nextTrip.getOrigMaz())))) {
+	                				if ( separateCavFiles )
+	                					cavTripTables[period][(emptyTripMode-1)*numberOfVotCategories+(emptyCarVotCat-1)][tazIndices[geogManager.getMazTazValue(hh.getHomeMaz())]][tazIndices[geogManager.getMazTazValue(nextTrip.getOrigMaz())]] += tripExpansionFactor;
+	                				else
+	                					nonCavTripTables[period][(emptyTripMode-1)*numberOfVotCategories+(emptyCarVotCat-1)][tazIndices[geogManager.getMazTazValue(hh.getHomeMaz())]][tazIndices[geogManager.getMazTazValue(nextTrip.getOrigMaz())]] += tripExpansionFactor;
+                    			}
+                    			
+                    			break;
+                			}
+        				
+        				}
+
 	        			
 	        			//Add last empty trip
 	            		if(carAllocationLastTrip[j]>threhsoldRoundUp && trip.getDestAct() > 0){
@@ -747,11 +792,14 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	            			tripDistanceFromHomeToOrig = distanceFromHome[origTaz];
 	            			destHome = 1;
 	            			origHome = trip.getOrigAct() == PurposeCategories.HOME.getIndex() ? 1 : 0;
-	            			record = hh.getId()+","+
+	            			record = totalDemand+","+
+   	            					hh.getId()+","+
 	            					(j+1)+","+
 	            					ifAvHh+","+
 	            					autoTripID +","+
 	            					0+","+
+                					0+","+
+	            					tripVehNum+","+
 	            					0+","+
 	            					trip.getOrigAct()+ ","+
 	            					TRIP_REPOSITIONING_PURPOSE+","+    
@@ -759,6 +807,8 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	            					hh.getHomeMaz()+","+
 	            					geogManager.getMazTazValue(trip.getDestMaz())+","+
 	            					geogManager.getMazTazValue(hh.getHomeMaz())+","+
+                					"-1"+","+
+	            					emptyTripMode+","+
 	            					"-1"+","+ 
 	            					origHome+","+
 	            					destHome +","+   
@@ -784,16 +834,14 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	            				totalAutoNonAVTrips++;                			
 	            			}
 
+	            			period = getTripTablePeriod(CommonProcedures.convertMinutesToInterval(departureTime, constants), periodIntervals); 
 
-
-                    period = getTripTablePeriod(CommonProcedures.convertMinutesToInterval(departureTime, constants), periodIntervals); 
-
-                    if(!ifExternalStationsIncluded ||(!ArrayUtils.contains(geogManager.getExternalStations(),geogManager.getMazTazValue(trip.getDestMaz())) && !ArrayUtils.contains(geogManager.getExternalStations(),geogManager.getMazTazValue(hh.getHomeMaz())))) {
-  		        				if ( separateCavFiles )
-  		        					cavTripTables[period][(emptyTripMode-1)*numberOfVotCategories+(emptyCarVotCat-1)][tazIndices[geogManager.getMazTazValue(trip.getDestMaz())]][tazIndices[geogManager.getMazTazValue(hh.getHomeMaz())]] += tripExpansionFactor;
-  		        				else
-  		        					nonCavTripTables[period][(emptyTripMode-1)*numberOfVotCategories+(emptyCarVotCat-1)][tazIndices[geogManager.getMazTazValue(trip.getDestMaz())]][tazIndices[geogManager.getMazTazValue(hh.getHomeMaz())]] += tripExpansionFactor;
-                    }
+	            			if(!ifExternalStationsIncluded ||(!ArrayUtils.contains(geogManager.getExternalStations(),geogManager.getMazTazValue(trip.getDestMaz())) && !ArrayUtils.contains(geogManager.getExternalStations(),geogManager.getMazTazValue(hh.getHomeMaz())))) {
+	            				if ( separateCavFiles )
+	            					cavTripTables[period][(emptyTripMode-1)*numberOfVotCategories+(emptyCarVotCat-1)][tazIndices[geogManager.getMazTazValue(trip.getDestMaz())]][tazIndices[geogManager.getMazTazValue(hh.getHomeMaz())]] += tripExpansionFactor;
+	            				else
+	            					nonCavTripTables[period][(emptyTripMode-1)*numberOfVotCategories+(emptyCarVotCat-1)][tazIndices[geogManager.getMazTazValue(trip.getDestMaz())]][tazIndices[geogManager.getMazTazValue(hh.getHomeMaz())]] += tripExpansionFactor;
+	            			}
 		                    
 			        		break;
 			        	}
@@ -808,11 +856,14 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	        		tripDistanceFromHomeToOrig = distanceFromHome[geogManager.getMazTazValue(trip.getOrigMaz())];
 	        		destHome = trip.getDestAct() == PurposeCategories.HOME.getIndex() ? 1 : 0;
 	        		origHome = trip.getOrigAct() == PurposeCategories.HOME.getIndex() ? 1 : 0;
-	    			record = hh.getId()+","+
+        			record = totalDemand+","+
+           					hh.getId()+","+
 	    					"-1"+","+
 	    					ifAvHh+","+
 	    					autoTripID +","+
 	    					(hhTripId+1)+","+
+	    					tripRecNum+","+
+        					tripVehNum+","+
 	    					trip.getPnum()+","+
 	    					trip.getOrigAct()+","+
 	    					trip.getDestAct()+","+
@@ -820,6 +871,8 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	    					trip.getDestMaz()+","+
 	    					geogManager.getMazTazValue(trip.getOrigMaz())+","+
 	    					geogManager.getMazTazValue(trip.getDestMaz())+","+
+        					tripMode+","+
+        					taxiModeCode+","+
 	    					carRepoType  + ","+
 	    					origHome+","+
 	    					destHome  + ","+
@@ -850,10 +903,10 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 		            period = getTripTablePeriod(CommonProcedures.convertMinutesToInterval(trip.getSchedDepart()+depLate-depEarly, constants), periodIntervals); 
 		            if(!ifExternalStationsIncluded ||(!ArrayUtils.contains(geogManager.getExternalStations(),origTaz) && !ArrayUtils.contains(geogManager.getExternalStations(),destTaz))) {
 	    				if( ifAvHh == 1 && separateCavFiles )
-	        				cavTripTables[period][(4-1)*numberOfVotCategories+(votCat-1)][tazIndices[geogManager.getMazTazValue(trip.getOrigMaz())]][tazIndices[geogManager.getMazTazValue(trip.getDestMaz())]] += tripExpansionFactor;
+	        				cavTripTables[period][(TAXI_TNC_MODE_INDEX-1)*numberOfVotCategories+(votCat-1)][tazIndices[geogManager.getMazTazValue(trip.getOrigMaz())]][tazIndices[geogManager.getMazTazValue(trip.getDestMaz())]] += tripExpansionFactor;
 	    				else
-	    					nonCavTripTables[period][(4-1)*numberOfVotCategories+(votCat-1)][tazIndices[geogManager.getMazTazValue(trip.getOrigMaz())]][tazIndices[geogManager.getMazTazValue(trip.getDestMaz())]] += tripExpansionFactor;
-            }
+	    					nonCavTripTables[period][(TAXI_TNC_MODE_INDEX-1)*numberOfVotCategories+(votCat-1)][tazIndices[geogManager.getMazTazValue(trip.getOrigMaz())]][tazIndices[geogManager.getMazTazValue(trip.getDestMaz())]] += tripExpansionFactor;
+		            }
 		            
 	        	}
 	      	}
@@ -921,7 +974,7 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	    logger.info(String.format( "%-30s","Total Extra Wait Time = ") + String.format("%,.1f",totalExtraWaitTime));
 	    logger.info(String.format( "%-30s","Total Early Departure Time = ") + String.format("%,.1f",totalEarlyDepTime));
 	    logger.info(" ");
-	    logger.info(" -------------------- Car Use Report ------------------------");
+	    logger.info(" -------------------- Car Use Report for HHs with Auto Trips ------------------------");
 	    logger.info(" ");
 	    logger.info(String.format( "%-60s","Total Number of Cars = ") + String.format("%,15d",totalCars));
 	    logger.info(String.format( "%-60s","Total Non-AV Cars = ") + String.format("%,15d",totalNonAVCars));
@@ -1010,7 +1063,7 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	private void writePurposeSummaryFile(List<Integer> tripPurposes, VehicleTypePreferences vehicleTypePreferences, Map<Integer, Integer> vehTypeIndexMap, int[][][] tripsByVehTypeByPurpose, PrintWriter outStreamPurpSummary) {
 		if ( outStreamPurpSummary != null ) {
         	
-	        String header = "vehicleType,category,fuelType,bodyType,carSize,tripMode";
+	        String header = "n,category,fuelType,bodyType,carSize,tripMode";
 	        for ( int purp : tripPurposes )
 	        	header += ",purp_" + purp;
 	        outStreamPurpSummary.println( header );

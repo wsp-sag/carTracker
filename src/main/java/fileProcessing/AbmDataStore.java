@@ -77,6 +77,7 @@ public class AbmDataStore {
 				propertyMap.get(AbmObjectTranslater.HH_MAZ_KEY),
 				propertyMap.get(AbmObjectTranslater.HH_VEH_FUEL_TYPES_KEY),
 				propertyMap.get(AbmObjectTranslater.HH_VEH_BODY_TYPES_KEY),
+				propertyMap.get(AbmObjectTranslater.HH_VEH_NUMS_KEY),
 				propertyMap.get(AbmObjectTranslater.HH_AV_FLAG_KEY),
 				propertyMap.get(AbmObjectTranslater.HH_ID_WO_SAMPLE_FIELD_KEY));
 		
@@ -96,9 +97,10 @@ public class AbmDataStore {
 			propertyMap.get( AbmObjectTranslater.TRIP_ARRIVE_MINUTE_FIELD_KEY  ),
 			propertyMap.get( AbmObjectTranslater.TRIP_ID_FIELD_KEY ),
 			propertyMap.get( AbmObjectTranslater.TRIP_ORIG_PURP_FIELD_KEY ),
-			 propertyMap.get( AbmObjectTranslater.TRIP_DEST_PURP_FIELD_KEY  ),
-			 propertyMap.get(AbmObjectTranslater.TRIP_ACTIVITY_DURATION_KEY),
-			  propertyMap.get(AbmObjectTranslater.TRIP_VOT_FIELD_KEY)
+			propertyMap.get( AbmObjectTranslater.TRIP_DEST_PURP_FIELD_KEY  ),
+			propertyMap.get(AbmObjectTranslater.TRIP_ACTIVITY_DURATION_KEY),
+			propertyMap.get(AbmObjectTranslater.TRIP_RECNUM_FIELD_KEY),
+			propertyMap.get(AbmObjectTranslater.TRIP_VOT_FIELD_KEY)
 		);
 		 
 		hhRecords = new HashMap<Integer, List<List<String>>>();
@@ -113,7 +115,8 @@ public class AbmDataStore {
         	if ( requiredHhField.get(i) == null )
         		continue;
         	hhFieldIndexMap.put( requiredHhField.get(i), count );
-        	hhIndexFieldMap.put( count++, requiredHhField.get(i) );
+        	hhIndexFieldMap.put( count, requiredHhField.get(i) );
+        	count++;
         }
 		
 		personFieldIndexMap = new HashMap<>();
@@ -123,17 +126,19 @@ public class AbmDataStore {
         	if ( requiredPersonField.get(i) == null )
         		continue;
         	personFieldIndexMap.put( requiredPersonField.get(i), count );
-        	personIndexFieldMap.put( count++, requiredPersonField.get(i) );
+        	personIndexFieldMap.put( count, requiredPersonField.get(i) );
+        	count++;
         }
 		
 		tripFieldIndexMap = new HashMap<>();
 		tripIndexFieldMap = new HashMap<>();
 		count = 0;
         for ( int i=0; i < requiredTripField.size(); i++ ) {
-        	if ( requiredTripField.get(i) == null  )
+        	if ( requiredTripField.get(i) == null || tripFieldIndexMap.containsKey(requiredTripField.get(i)) )
         		continue;
         	tripFieldIndexMap.put( requiredTripField.get(i), count );
-        	tripIndexFieldMap.put( count++, requiredTripField.get(i) );
+        	tripIndexFieldMap.put( count, requiredTripField.get(i) );
+        	count++;
         }
 		
 
