@@ -105,7 +105,7 @@ public class CarAllocation
 
     //public static final int M_BIG_CONSTANT = Integer.MAX_VALUE;
     public static final long M_BIG_CONSTANT = (long) (Math.pow(2, 20)-1);
-    public static final long NON_AV_REPO_COST = (long) (Math.pow(2, 15)-1);
+    public static final long NON_AV_REPO_COST = (long) (Math.pow(2, 20)-1);
 
     public static final int NEGATIVE_DEPART_TIME_ADJUSTMENT = 720;
     
@@ -144,8 +144,8 @@ public class CarAllocation
     private static final int INDEX_3_1 = constraintRepoIndex++;
     private static final int INDEX_4_1 = constraintRepoIndex++;
     private static final int INDEX_4_2 = constraintRepoIndex++;
-    private static final int INDEX_4_3 = constraintRepoIndex++;
-    private static final int INDEX_4_4 = constraintRepoIndex++;
+//    private static final int INDEX_4_3 = constraintRepoIndex++;
+//    private static final int INDEX_4_4 = constraintRepoIndex++;
     private static final int NUM_CONSTRAINT_REPO_INDICES = constraintRepoIndex;
 
     private static int constraintTripIndex = 0;
@@ -160,8 +160,8 @@ public class CarAllocation
     private static int constraintIJIndex = 0;
     private static final int INDEX_2_1 = constraintIJIndex++;
     private static final int INDEX_2_2 = constraintIJIndex++;
-    private static final int INDEX_2_3 = constraintIJIndex++;
-    private static final int INDEX_2_4 = constraintIJIndex++;
+//    private static final int INDEX_2_3 = constraintIJIndex++;
+//    private static final int INDEX_2_4 = constraintIJIndex++;
     private static final int NUM_CONSTRAINT_IJ_INDICES = constraintIJIndex;
 
     private static int constraintJIndex = 0;
@@ -340,6 +340,9 @@ public class CarAllocation
         		float[] distanceFromEndTrip = sharedDistanceObject.getOffpeakDistanceFromTaz(destTaz);
 
 
+        		float autoOperatingCost = repositionCostPerMile;
+        		float costOfCurrentTrip = aTrip.getDistance()*autoOperatingCost;
+        		
         		float reposCostHD = repoCostForHh*(distanceFromHome[origTaz]);
         		float reposCostOH = repoCostForHh*(distanceToHome[destTaz]);
 
@@ -352,16 +355,16 @@ public class CarAllocation
 
         		//Set repo cost to 0 for first/last trip with person
         		if(ao == PurposeCategories.HOME.getIndex())
-        			reposCostHD= 0;
+        			reposCostHD= costOfCurrentTrip;
 
         		if(ad == PurposeCategories.HOME.getIndex())
-        			reposCostOH= 0;
+        			reposCostOH= costOfCurrentTrip;
 
 
         		// IJ Variables (trip and auto)
         		for ( int j=0; j < numAutos; j++ ) {
         			
-        			int usualDrDummy = personUsualCarId > 0 ? 1 : 0;
+        			int usualDrDummy = personUsualCarId == j ? 1 : 0;
 
         			float diffPnumAuto = Math.abs(j-aTrip.getPnum());
         			// F6
@@ -399,10 +402,15 @@ public class CarAllocation
 					}
         							
 					int vehTypeCategory = vehicleTypePreferences.getCategory(fuelType, bodyType);
+					
+					double coeffValue = -usualDrBonus*usualDrDummy + carAllocationPreference + (-0.01*diffPnumAuto) + (-0.001*vehTypeCategory) + (-0.1*costOfCurrentTrip);
 
+					if(logHhId == hh.getId() )
+						logger.info( String.format( "i=%d, j=%d, pnum=%d, usualDrBonus=%.3f, usualDrDummy=%d, carAllocationPreference=%.3f, -0.01*diffPnumAuto=%.0f, -0.001*vehTypeCategory=%d, costOfCurrentTrip=%.3f, coeffValue=%.3f", i, j, aTrip.getPnum(), usualDrBonus, usualDrDummy, carAllocationPreference, diffPnumAuto, vehTypeCategory, costOfCurrentTrip, coeffValue ) );
+					
 	            	ofVarsIJ[INDEX_CarAllo ][i][j] = solver.makeIntVar( lowerBound, uppperBound, ( name = "CarAlloc_"+i+"_"+j ) );
-                    objective.setCoefficient( ofVarsIJ[INDEX_CarAllo][i][j], -usualDrBonus*usualDrDummy + carAllocationPreference + (-0.0001*diffPnumAuto) + (-0.00001*vehTypeCategory)); //j is added for singularity
-                    ofCoeffList.add( (float) (-usualDrBonus*usualDrDummy + carAllocationPreference + (-0.0001*diffPnumAuto) + (-0.00001*vehTypeCategory)));
+                    objective.setCoefficient( ofVarsIJ[INDEX_CarAllo][i][j], coeffValue ); //j is added for singularity
+                    ofCoeffList.add( (float) coeffValue );
             		variableNameList.add( name );
             		//ofVarsIJ[INDEX_CarAllo ][i][j].setInteger(true);
             		//F2
@@ -555,8 +563,10 @@ public class CarAllocation
 
 	            		//F2
 	            		ofVarsIJK[INDEX_CarLink ][i][k][j] = solver.makeNumVar( 0.0, 1, ( name = "CarLink_"+i+"_"+k+"_"+j ) );
-	                    objective.setCoefficient( ofVarsIJK[INDEX_CarLink ][i][k][j], 0.0);
-	                    ofCoeffList.add( 0.0f );
+	                    //objective.setCoefficient( ofVarsIJK[INDEX_CarLink ][i][k][j], 0.0);
+	                    //ofCoeffList.add( 0.0f );
+	                    objective.setCoefficient( ofVarsIJK[INDEX_CarLink ][i][k][j], (-0.2f*(samePerson ? 1 : 0)) );
+	                    ofCoeffList.add( (-0.2f*(samePerson ? 1 : 0)) );
 	            		variableNameList.add( name );
 	        		}
         		}

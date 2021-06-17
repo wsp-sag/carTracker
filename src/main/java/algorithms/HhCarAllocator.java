@@ -9,10 +9,12 @@ import org.apache.log4j.Logger;
 
 import com.google.ortools.linearsolver.MPSolver;
 
+import appLayer.WriteCarAllocationOutputFilesMag;
 import fileProcessing.AbmDataStore;
 import fileProcessing.GlobalProperties;
 import objects.Household;
-import objects.HouseholdCarAllocation;;
+import objects.HouseholdCarAllocation;
+import objects.Person;;
 
 
 public class HhCarAllocator implements HhCarAllocatorIf, Serializable {
@@ -94,18 +96,48 @@ public class HhCarAllocator implements HhCarAllocatorIf, Serializable {
             	gikjFixFlag = new int[hh.getNumAutos()][hh.getAutoTrips().size()][hh.getAutoTrips().size()];
             	int numVarChanged = 0;
             	
+            	Person[] persons = hh.getPersons();
+            	
             	// round up Xij and Hikj
             	for(int i = 0; i < hh.getAutoTrips().size(); i++){
+
             		for(int j = 0; j < hh.getNumAutos(); j++){
             			
-            			if(carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > roundUpThresholdXij){
-            				xijFixFlag[i][j] = 1;
-            				xijIntergerization[i][j] = 1;
+            			if(carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > roundUpThresholdXij ){
+            					xijFixFlag[i][j] = 1;
+            					xijIntergerization[i][j] = 1;
             			}
             			if(carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] < 1 && carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > 0  && carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > MIN_LOW_DECIMAL_POSITIVE ) 
             				numVarChanged++;            		
-            			        
+
             		}
+
+            	
+    				int sumCarTripAllocation = 0;
+	        		int carId2 = -1; 
+    	        	for( int jj=0; jj < carAllocationResults[CarAllocation.INDEX_CarAllo][i].length; jj++) {
+    	        		if (carAllocationResults[CarAllocation.INDEX_CarAllo][i][jj] > WriteCarAllocationOutputFilesMag.threhsoldRoundUp) {
+        	        		sumCarTripAllocation ++;
+        	        		if ( carId2 < 0 )
+        	        			carId2 = jj;
+    	        		}
+    	        	}
+        			
+    	        	if ( sumCarTripAllocation > 1 ) {
+    	        		
+	        			for( int jj=0; jj < carAllocationResults[CarAllocation.INDEX_CarAllo][i].length; jj++) {
+    	        			xijFixFlag[i][jj] = 0;
+        					xijIntergerization[i][jj] = 0;
+	        			}
+
+    	        		int carId1 = persons[hh.getAutoTrips().get(i).getPnum()].getUsualCarId();
+    	        		int carId = carId1 >= 0 ? carId1 : carId2;
+	        			xijFixFlag[i][carId] = 1;
+    					xijIntergerization[i][carId] = 1;
+        				numVarChanged++;            		
+
+    	        	}
+        			
             	}
             	boolean optimalSolutionBulkIntegerizedFound = false;
             	boolean optimalSolution2ndBulkIntegerizedFound = false;

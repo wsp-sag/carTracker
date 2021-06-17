@@ -200,10 +200,11 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
       PrintWriter outStreamDistSummary = null;
 	    try {
 	    	outStreamTrip = new PrintWriter( new BufferedWriter( new FileWriter( outputTripListFilename ) ) );
-	        String header1 = "hhid,pnum,tripid,tripRecNum,mode,hhAutoId,vehNum,vehTypeCategory,vehFuelType,vehBodyType,origPurp,destPurp,origMaz,destMaz,origTaz,destTaz,tripDistance,tripDistanceFromHome,tripDistanceToHome,plannedDepartureTime,departureEarly,departureLate,finalDeparture, finalArrival,x1,x2,x3,x4,unsatisfiedResult,numIterationIntegerizing";
+	        String header1 = "hhid,pnum,tripid,tripRecNum,mode,hhAutoId,vehNum,vehTypeCategory,vehFuelType,vehBodyType,origPurp,destPurp,origMaz,destMaz,origTaz,destTaz,tripDistance,tripDistanceFromHome,tripDistanceToHome,plannedDepartureTime,departureEarly,departureLate,finalDeparture, finalArrival,x1,x2,x3,x4,unsatisfiedResult,singular,numIterationIntegerizing";
 	        outStreamTrip.println( header1 );   
 	        outStreamCar = new PrintWriter( new BufferedWriter( new FileWriter( outputDisaggregateCarUseFileName ) ) );
-	        String header2 = "totalDemand,hhid,carId,aVStatus,autoTripId,autoHhTripId,tripRecNum,tripVehNum,driverId,origPurp,destPurp,origMaz,destMaz,origTaz,destTaz,tripMode,finalMode,carRepositionType,origHome,destHome,tripDistance,distanceFromHomeToOrig,distanceFromHomeToDest,plannedDeparture,finalDeparture,finalArrival,departureEarly,departureLate,parkDurationAtDestination,ParkCostAtDestination,parkDurationAtNextOrigin,parkCostAtNextOrigin";
+	        String header2 = "totalDemand,hhid,carId,aVStatus,autoTripId,autoHhTripId,tripRecNum,tripVehNum,driverId,origPurp,destPurp,origMaz,destMaz,origTaz,destTaz,tripMode,finalMode,carRepositionType,origHome,destHome,tripDistance,distanceFromHomeToOrig,distanceFromHomeToDest,plannedDeparture,finalDeparture,finalArrival,departureEarly,departureLate,recType,recnum";
+	        //String header2 = "totalDemand,hhid,carId,aVStatus,autoTripId,autoHhTripId,tripRecNum,tripVehNum,driverId,origPurp,destPurp,origMaz,destMaz,origTaz,destTaz,tripMode,finalMode,carRepositionType,origHome,destHome,tripDistance,distanceFromHomeToOrig,distanceFromHomeToDest,plannedDeparture,finalDeparture,finalArrival,departureEarly,departureLate,parkDurationAtDestination,ParkCostAtDestination,parkDurationAtNextOrigin,parkCostAtNextOrigin";
 	        outStreamCar.println( header2 );   
 	        outStreamHh = new PrintWriter( new BufferedWriter( new FileWriter( outputProbCarChangeFileName ) ) );
 	        String header3 = "hhid,hidAcrossSample,prevIterationCarChangeProb,probCarOwnershipChange,msaFactor";
@@ -246,8 +247,12 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	    
 	    
 	    
+	    int sumAutos = 0;
+        int sumTripSatisfied = 0;
+        int sumTripNotSatisfied = 0;
+        
 	    
-	    int totalDemandMet = 0;
+	    int totalDemandMet = 0;	    
 	    double addCarFactor = Double.parseDouble(propertyMap.get("add.car.factor"));
 	    double subtractCarFactor = Double.parseDouble(propertyMap.get("subtract.car.factor"));
 	    
@@ -351,7 +356,7 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
     				trip.getOrigAct()+","+ trip.getDestAct()+","+trip.getOrigMaz()+","+ trip.getDestMaz()+","+ origTaz + ","+ destTaz+","+
     				tripDistance+","+tripDistanceFromHome+","+tripDistanceToHome+","+
             		trip.getSchedDepart()+","+ depEarly+","+ depLate +","+finalDeparture+","+finalArrival+","+
-            		xij[0]+","+xij[1]+","+xij[2]+","+xij[3] + ","+ unsatisRes + ","+ depArrObj.getNumIterationsForIntegerizing();
+            		xij[0]+","+xij[1]+","+xij[2]+","+xij[3] + ","+ unsatisRes + ","+ singular + ","+ depArrObj.getNumIterationsForIntegerizing();
 	                    
 	            outStreamTrip.println( record );     
 	            int period = getTripTablePeriod(CommonProcedures.convertMinutesToInterval(trip.getSchedDepart()+depLate-depEarly, constants), periodIntervals);
@@ -377,6 +382,7 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	        }
 	        
 	        
+	        
 			int ifAvHh = hh.getIfAvHousehold();
 	        totalCars+=numAuto;
 	        if(ifAvHh == 1){
@@ -385,6 +391,9 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	        else{
 	        	totalNonAVCars+=numAuto;
 	        }
+	        
+	        
+
 	        int[] carUsed = new int[numAuto];
 	        int autoTripID = 1;
 	        int destHome = 0;
@@ -435,6 +444,7 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 				
 				int emptyCarVotCat = 1;
 				int emptyTripMode= 1;
+				int sumCarTripAllocation = 0;
 				if ( separateCavFiles )
 					emptyTripMode= EMPTY_TRIP_MODE;				
 	        	for( int j = 0; j < carAllocationForTrip.length; j ++){
@@ -444,6 +454,17 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	        		int carTripAllocation =0;
 	        		if(carAllocationForTrip[j]>threhsoldRoundUp)
 	        			carTripAllocation = 1;
+	        		sumCarTripAllocation += carTripAllocation;
+	        		
+	        		if ( sumCarTripAllocation > 1 ) {
+		        		String carAllocResult = "\"[" + String.valueOf(carAllocationForTrip[0]);
+		        		for( int jj=1; jj < carAllocationForTrip.length; jj++ )
+		        			carAllocResult += "," + String.valueOf(carAllocationForTrip[jj]);
+		        		carAllocResult += "]\"";
+		        		String errorMsg = "*** " + String.format( "hhid=%d, i=%d, j=%d, carAllocationForTrip=%s, pnum=%d", hh.getId(), i, j, carAllocResult, trip.getPnum() ) + " ***";
+		        		logger.error(errorMsg);
+	        		}
+	        		
 	        		float autoRecordDistance = 0;
 	        		
 	        		for(int s = i+1; s <aTrips.size(); s++){
@@ -464,6 +485,8 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	        		
 	        		if(carTripAllocation == 1){
 	        			tripSatisfied= 1;
+	        			sumTripSatisfied++;
+	        			sumAutos++;
 	        			carUsed[j] = 1;
 	        			// add first empty trip (if any)
 	            		if(carAllocationFirstTrip[j]>threhsoldRoundUp && trip.getOrigAct() > 0){
@@ -500,7 +523,10 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	            					departureTime + ","+
 	            					(scheduleDepart + depLate - depEarly)+","+
 	            					0+","+
-	            					0;
+	            					0+","+
+	            					1+","+
+	            					sumAutos;
+	            			
 	            			outStreamCar.println( record );  
 	            			autoTripID++;
 	            			totalAutoTrips++;
@@ -557,7 +583,10 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	        					(trip.getSchedDepart()+depLate-depEarly)+","+
 	        					(trip.getSchedDepart()+depLate-depEarly+trip.getSchedTime())+","+
 	        					depEarly+","+
-	        					depLate;
+	        					depLate+","+
+		    					2+","+
+            					sumAutos;
+            			
 	        			outStreamCar.println( record );  
 	        			autoTripID++;
 	        			totalAutoTrips++;
@@ -582,6 +611,8 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	        			}
 	        			
 	        			//Add empty trips
+	        			int e=1;
+	        			int ee=1;
 	        			for(int k =i+1; k<aTrips.size();k++){
 	        				AutoTrip nextTrip = aTrips.get(k);
 	        				float nextDepEarly = (float)depArrResults[CarAllocation.DEP_EARLY][nextTrip.getPnum()][trips.get(nextTrip.getHhTripId()).getIndivTripId()];
@@ -634,7 +665,11 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	                					departureTime+","+
 	                					arrivalTime+ ","+
 	                					0+","+
-	                					0;
+		            					0+","+
+		            					(30+e)+","+
+		            					sumAutos;
+		            			
+		            			e++;
 	                			outStreamCar.println( record ); 
 	                			autoTripID++;
 	                			totalAutoTrips++;
@@ -694,7 +729,11 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	                					departureTime+","+
 	                					(departureTime+autoRecordDistance*Float.parseFloat(propertyMap.get("minutes.per.mile")))+","+
 	                					0+","+
-	                					0;
+		            					0+","+
+		            					(40+ee)+","+
+		            					sumAutos;
+		            			
+		            			
 	                			outStreamCar.println( record );  
 	                			autoTripID++;
 	                			totalAutoTrips++;
@@ -753,8 +792,13 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
                     					departureTime+","+
                     					(nextTrip.getSchedDepart() +  nextDepLate - nextDepEarly) +","+
                     					0+","+
-                    					0;
-                    			outStreamCar.println( record );  
+		            					0+","+
+		            					(50+ee)+","+
+		            					sumAutos;
+		            			
+		            			ee++;
+
+		            			outStreamCar.println( record );  
                     			autoTripID++;
                     			
                     			totalAutoTrips++;
@@ -819,7 +863,10 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	            					departureTime+","+
 	            					(departureTime+autoRecordDistance*Float.parseFloat(propertyMap.get("minutes.per.mile")))+","+
 	            					0+","+
-	            					0;
+	            					0+","+
+	            					6+","+
+	            					sumAutos;
+	            			
 	            			outStreamCar.println( record );  
 	            			autoTripID++;
 	            			totalAutoTrips++;
@@ -851,6 +898,8 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	        	}
 	        	//Add unmet demand
 	        	if(tripSatisfied == 0){
+	        		sumTripNotSatisfied++;
+	        		sumAutos++;
 	        		//Add actual person trip
 	        		tripDistanceFromHome = distanceFromHome[geogManager.getMazTazValue(trip.getDestMaz())];
 	        		tripDistanceFromHomeToOrig = distanceFromHome[geogManager.getMazTazValue(trip.getOrigMaz())];
@@ -883,7 +932,10 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	    					(trip.getSchedDepart()+depLate-depEarly)+","+
 	    					(trip.getSchedDepart()+depLate-depEarly+trip.getSchedTime())+","+
 	    					depEarly+","+
-	    					depLate;
+	    					depLate+","+
+							7+","+
+        					sumAutos;
+        			
 	    			outStreamCar.println( record );  
 	    			autoTripID++;
 	    			//add them as taxi
@@ -944,9 +996,13 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	                
 	    
 	    }
+	    
+	    logger.info( "sumAutos=" + sumAutos + ", sumTripSatisfied=" + sumTripSatisfied + ", sumTripNotSatisfied=" + sumTripNotSatisfied );
+	    
 	    outStreamCar.close();    
 	    outStreamTrip.close();
 	    outStreamHh.close();
+
 	    
         writePurposeSummaryFile(tripPurposes, vehicleTypePreferences, vehTypeIndexMap, tripsByVehTypeByPurpose, outStreamPurpSummary );
         writePersTypeSummaryFile( vehicleTypePreferences, vehTypeIndexMap, tripsByVehTypeByPersonType, outStreamPersTypeSummary );
