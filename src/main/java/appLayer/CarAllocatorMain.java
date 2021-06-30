@@ -272,7 +272,7 @@ public class CarAllocatorMain {
 		
 	    CarAllocatorMain mainObj = new CarAllocatorMain();
 	
-		System.out.println ( "CarTracker, 11Dec2020, v1.12, starting." );
+		System.out.println ( "CarTracker, 30Jun2021, v3.01, starting." );
 	    
 		ResourceBundle rb = null;
 		if ( args.length >=0 ) {

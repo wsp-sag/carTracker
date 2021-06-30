@@ -58,6 +58,7 @@ public class HhCarAllocator implements HhCarAllocatorIf, Serializable {
 
         //System.out.println("household = " + hh.getId());
         solverType = "CLP_LINEAR_PROGRAMMING";
+		//solverType = "CBC_MIXED_INTEGER_PROGRAMMING";
         if(runMixedIntergerLP)
 			solverType = "CBC_MIXED_INTEGER_PROGRAMMING";
         
@@ -85,9 +86,9 @@ public class HhCarAllocator implements HhCarAllocatorIf, Serializable {
             	
             	//Integerizing the car allocation (Xij)
             	// first bulk integerizing
-            	carAllocationResults= allocator.getCarAllocationResults( hh, solver, true );
-            	carLinkingResults = allocator.getCarLinkingResults( hh, solver, true );
-            	double[] unsatisDemandResultsIter = allocator.getUnsatisfiedRemandResults( hh, solver, true );
+            	carAllocationResults= allocator.getCarAllocationResults( hh, solver );
+            	carLinkingResults = allocator.getCarLinkingResults( hh, solver );
+            	double[] unsatisDemandResultsIter = allocator.getUnsatisfiedRemandResults( hh, solver );
             	xijIntergerization = new int[hh.getAutoTrips().size()][hh.getNumAutos()];
             	xijFixFlag = new int[hh.getAutoTrips().size()][hh.getNumAutos()];
             	sikjIntergerization = new int[hh.getNumAutos()][hh.getAutoTrips().size()][hh.getAutoTrips().size()];
@@ -161,8 +162,8 @@ public class HhCarAllocator implements HhCarAllocatorIf, Serializable {
             	// bulk integerize Sik and Gik
             	if(optimalSolutionBulkIntegerizedFound){
             		numVarChanged = 0;
-            		carAllocationResults= allocator.getCarAllocationResults( hh, solver, true );
-                	carLinkingResults = allocator.getCarLinkingResults( hh, solver, true );
+            		carAllocationResults= allocator.getCarAllocationResults( hh, solver );
+                	carLinkingResults = allocator.getCarLinkingResults( hh, solver );
                 	
                 	// round up Xij and Hikj
                 	for(int i = 0; i < hh.getAutoTrips().size(); i++){
@@ -219,8 +220,8 @@ public class HhCarAllocator implements HhCarAllocatorIf, Serializable {
             	
             	// no need to iteratively integerize if after converting all >threshold to 1 doesnt break the constraints
             	if(optimalSolutionBulkIntegerizedFound && optimalSolution2ndBulkIntegerizedFound){
-            		carAllocationResults= allocator.getCarAllocationResults( hh, solver, true );
-            		carLinkingResults = allocator.getCarLinkingResults( hh, solver, true );
+            		carAllocationResults= allocator.getCarAllocationResults( hh, solver );
+            		carLinkingResults = allocator.getCarLinkingResults( hh, solver );
             		numVarChanged = 0;
                 	for(int i = 0; i < hh.getAutoTrips().size(); i++){
                 		for(int j = 0; j < hh.getNumAutos(); j++){
@@ -356,9 +357,9 @@ public class HhCarAllocator implements HhCarAllocatorIf, Serializable {
                 	}
                 	
                 	if(optimalSolutionIntegerizedFound){
-	                	carAllocationResults= allocator.getCarAllocationResults( hh, solver, true );
-	                	unsatisDemandResultsIter = allocator.getUnsatisfiedRemandResults( hh, solver, true );
-	                	carLinkingResults = allocator.getCarLinkingResults( hh, solver, true );
+	                	carAllocationResults= allocator.getCarAllocationResults( hh, solver );
+	                	unsatisDemandResultsIter = allocator.getUnsatisfiedRemandResults( hh, solver );
+	                	carLinkingResults = allocator.getCarLinkingResults( hh, solver );
 	                }
                 	// change solver to mixed integer as last resort in case both bulk and iterative integerizing fails
                 	else{
@@ -460,11 +461,11 @@ public class HhCarAllocator implements HhCarAllocatorIf, Serializable {
         
                 
         // get results from the solver - double[0][person][trip departs] and double[1][persons][trip arrives]
-        double[][][] depArrResults = allocator.getDepartArriveResults( hh, solver, optimalSolutionFound );
+        double[][][] depArrResults = allocator.getDepartArriveResults( hh, solver );
         
-        double[][][]carAllocationResults= allocator.getCarAllocationResults( hh, solver, optimalSolutionFound );
-        double[][][][] carLinkingResults = allocator.getCarLinkingResults( hh, solver, optimalSolutionFound );
-        double[] unsatisDemandResults = allocator.getUnsatisfiedRemandResults( hh, solver, optimalSolutionFound );
+        double[][][]carAllocationResults= allocator.getCarAllocationResults( hh, solver );
+        double[][][][] carLinkingResults = allocator.getCarLinkingResults( hh, solver );
+        double[] unsatisDemandResults = allocator.getUnsatisfiedRemandResults( hh, solver );
         
         
         HouseholdCarAllocation result = new HouseholdCarAllocation( hh, unsatisDemandResults,depArrResults, carAllocationResults,carLinkingResults,iterNum,iterNumForIntegerizing );

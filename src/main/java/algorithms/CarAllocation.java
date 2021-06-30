@@ -105,7 +105,7 @@ public class CarAllocation
 
     //public static final int M_BIG_CONSTANT = Integer.MAX_VALUE;
     public static final long M_BIG_CONSTANT = (long) (Math.pow(2, 20)-1);
-    public static final long NON_AV_REPO_COST = (long) (Math.pow(2, 20)-1);
+    public static final long NON_AV_REPO_COST = (long) (Math.pow(2, 15)-1);
 
     public static final int NEGATIVE_DEPART_TIME_ADJUSTMENT = 720;
     
@@ -677,6 +677,7 @@ public class CarAllocation
     		constraintsLP2[INDEX_1_1][i].setCoefficient( ofVarsI[INDEX_UnSatis][i], 1.0);
 
 
+
     		float autoTripPlanDepTime = aTrip.getSchedDepart() + NEGATIVE_DEPART_TIME_ADJUSTMENT;
     		float autoTravelTime = aTrip.getSchedTime();
 
@@ -948,6 +949,14 @@ public class CarAllocation
         //solver.setTimeLimit( CPU_TIME_LIMIT );
         MPSolver.ResultStatus resultStatus = solver.solve();
 
+//    	String lpOutput = solver.exportModelAsLpFormat(true);
+//    	String mpsOutput = solver.exportModelAsMpsFormat(true, true);
+//    	logger.info("start of lp format");
+//    	logger.info(lpOutput);
+//    	logger.info("start of mps format");
+//    	logger.info(mpsOutput);
+//    	logger.info("end lp logging");
+    	
         // Check that the problem has an optimal solution.
         if (resultStatus != MPSolver.ResultStatus.OPTIMAL) {
           //logger.error("The solver did not find an optimal solution!");
@@ -1128,7 +1137,7 @@ public class CarAllocation
     }
 
 
-    public double[][][] getDepartArriveResults( Household hh, MPSolver solver, boolean solutionFound ) {
+    public double[][][] getDepartArriveResults( Household hh, MPSolver solver ) {
 
     	// declare an array to hold person-trip depart times in the 0 index and person-trip arrive times in the 1 index.
     	double[][][] departArriveResults = new double[DEP_ARR_INDICES][][];
@@ -1154,10 +1163,8 @@ public class CarAllocation
 
         		Trip trip = trips.get( tripIds.get( k ) );
         		int i = trip.getIndivTripId();
-        		if ( solutionFound ) {
-	        		departArriveResults[DEP_EARLY][m][i] = solver.lookupVariableOrNull( "DepEarly_"+m+"_"+i ).solutionValue();
-	        		departArriveResults[DEP_LATE][m][i] = solver.lookupVariableOrNull( "DepLate_"+m+"_"+i ).solutionValue();
-        		}
+        		departArriveResults[DEP_EARLY][m][i] = solver.lookupVariableOrNull( "DepEarly_"+m+"_"+i ).solutionValue();
+        		departArriveResults[DEP_LATE][m][i] = solver.lookupVariableOrNull( "DepLate_"+m+"_"+i ).solutionValue();
             }
     	}
 
@@ -1165,21 +1172,19 @@ public class CarAllocation
 
     }
 
-public double[] getUnsatisfiedRemandResults( Household hh, MPSolver solver, boolean solutionFound ) {
+public double[] getUnsatisfiedRemandResults( Household hh, MPSolver solver ) {
 
     	List<AutoTrip> aTrips = hh.getAutoTrips();
     	double[] carAllocationResults = new double[aTrips.size()];
 
     	for ( int i=0; i < aTrips.size(); i++ ) {
-    		if ( solutionFound ) {
-    			carAllocationResults[i] = solver.lookupVariableOrNull(  "UnSat_"+i).solutionValue();
-    		}
+   			carAllocationResults[i] = solver.lookupVariableOrNull(  "UnSat_"+i).solutionValue();
     	}
 
     	return carAllocationResults;
 
     }
- public double[][][] getCarAllocationResults( Household hh, MPSolver solver, boolean solutionFound ) {
+ public double[][][] getCarAllocationResults( Household hh, MPSolver solver ) {
 
     	double[][][] carAllocationResults = new double[NUM_IJ_VARIABLE_INDICES][][];
 
@@ -1198,18 +1203,16 @@ public double[] getUnsatisfiedRemandResults( Household hh, MPSolver solver, bool
 
     	for ( int i=0; i < aTrips.size(); i++ ) {
         	for ( int j=0; j < numAuto; j++ ) {
-        		if ( solutionFound ) {
-	        		carAllocationResults[INDEX_CarAllo][i][j] = solver.lookupVariableOrNull(  "CarAlloc_"+i+"_"+j ).solutionValue();
-	        		carAllocationResults[INDEX_FirstCarTrip][i][j] = solver.lookupVariableOrNull( "FirstCarTrip_"+i+"_"+j ).solutionValue();
-	        		carAllocationResults[INDEX_LastCarTrip][i][j] = solver.lookupVariableOrNull( "LastCarTrip_"+i+"_"+j ).solutionValue();
-        		}
+        		carAllocationResults[INDEX_CarAllo][i][j] = solver.lookupVariableOrNull(  "CarAlloc_"+i+"_"+j ).solutionValue();
+        		carAllocationResults[INDEX_FirstCarTrip][i][j] = solver.lookupVariableOrNull( "FirstCarTrip_"+i+"_"+j ).solutionValue();
+        		carAllocationResults[INDEX_LastCarTrip][i][j] = solver.lookupVariableOrNull( "LastCarTrip_"+i+"_"+j ).solutionValue();
             }
     	}
 
     	return carAllocationResults;
 
     }
- public double[][][][] getCarLinkingResults( Household hh, MPSolver solver, boolean solutionFound ) {
+ public double[][][][] getCarLinkingResults( Household hh, MPSolver solver ) {
 
  	// declare an array to hold person-trip depart times in the 0 index and person-trip arrive times in the 1 index.
  	double[][][][] carLinkingResults = new double[NUM_IJK_VARIABLE_INDICES][][][];
@@ -1234,12 +1237,10 @@ public double[] getUnsatisfiedRemandResults( Household hh, MPSolver solver, bool
  	for ( int i=0; i < aTrips.size(); i++ ) {
      	for ( int j=0; j < numAuto; j++ ) {
      		for(int k = i+1; k < aTrips.size(); k++){
-        		if ( solutionFound ) {
-	     			carLinkingResults[INDEX_SameTripParkDi][j][i][k] = solver.lookupVariableOrNull(  "ParkDi_"+i+"_"+k+"_"+j ).solutionValue();
-	     			carLinkingResults[INDEX_SameTripParkOk][j][i][k] = solver.lookupVariableOrNull( "ParkOk_"+i+"_"+k+"_"+j ).solutionValue();
-	     			carLinkingResults[INDEX_SameTripParH][j][i][k] = solver.lookupVariableOrNull(  "ParkH_"+i+"_"+k+"_"+j ).solutionValue();
-	     			carLinkingResults[INDEX_CarLink][j][i][k] = solver.lookupVariableOrNull("CarLink_"+i+"_"+k+"_"+j ).solutionValue();
-        		}
+     			carLinkingResults[INDEX_SameTripParkDi][j][i][k] = solver.lookupVariableOrNull(  "ParkDi_"+i+"_"+k+"_"+j ).solutionValue();
+     			carLinkingResults[INDEX_SameTripParkOk][j][i][k] = solver.lookupVariableOrNull( "ParkOk_"+i+"_"+k+"_"+j ).solutionValue();
+     			carLinkingResults[INDEX_SameTripParH][j][i][k] = solver.lookupVariableOrNull(  "ParkH_"+i+"_"+k+"_"+j ).solutionValue();
+     			carLinkingResults[INDEX_CarLink][j][i][k] = solver.lookupVariableOrNull("CarLink_"+i+"_"+k+"_"+j ).solutionValue();
      		}
      	}
  	}

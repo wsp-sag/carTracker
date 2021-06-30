@@ -203,7 +203,7 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	        String header1 = "hhid,pnum,tripid,tripRecNum,mode,hhAutoId,vehNum,vehTypeCategory,vehFuelType,vehBodyType,origPurp,destPurp,origMaz,destMaz,origTaz,destTaz,tripDistance,tripDistanceFromHome,tripDistanceToHome,plannedDepartureTime,departureEarly,departureLate,finalDeparture, finalArrival,x1,x2,x3,x4,unsatisfiedResult,singular,numIterationIntegerizing";
 	        outStreamTrip.println( header1 );   
 	        outStreamCar = new PrintWriter( new BufferedWriter( new FileWriter( outputDisaggregateCarUseFileName ) ) );
-	        String header2 = "totalDemand,hhid,carId,aVStatus,autoTripId,autoHhTripId,tripRecNum,tripVehNum,driverId,origPurp,destPurp,origMaz,destMaz,origTaz,destTaz,tripMode,finalMode,carRepositionType,origHome,destHome,tripDistance,distanceFromHomeToOrig,distanceFromHomeToDest,plannedDeparture,finalDeparture,finalArrival,departureEarly,departureLate,recType,recnum";
+	        String header2 = "totalDemand,hhid,carId,aVStatus,autoTripId,autoHhTripId,tripRecNum,tripVehNum,driverId,origPurp,destPurp,origMaz,destMaz,origTaz,destTaz,tripMode,finalMode,carRepositionType,origHome,destHome,tripDistance,distanceFromHomeToOrig,distanceFromHomeToDest,plannedDeparture,finalDeparture,finalArrival,departureEarly,departureLate,recType,sumAutos,recnum";
 	        //String header2 = "totalDemand,hhid,carId,aVStatus,autoTripId,autoHhTripId,tripRecNum,tripVehNum,driverId,origPurp,destPurp,origMaz,destMaz,origTaz,destTaz,tripMode,finalMode,carRepositionType,origHome,destHome,tripDistance,distanceFromHomeToOrig,distanceFromHomeToDest,plannedDeparture,finalDeparture,finalArrival,departureEarly,departureLate,parkDurationAtDestination,ParkCostAtDestination,parkDurationAtNextOrigin,parkCostAtNextOrigin";
 	        outStreamCar.println( header2 );   
 	        outStreamHh = new PrintWriter( new BufferedWriter( new FileWriter( outputProbCarChangeFileName ) ) );
@@ -250,6 +250,7 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	    int sumAutos = 0;
         int sumTripSatisfied = 0;
         int sumTripNotSatisfied = 0;
+        int recnum = 1;
         
 	    
 	    int totalDemandMet = 0;	    
@@ -525,7 +526,8 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	            					0+","+
 	            					0+","+
 	            					1+","+
-	            					sumAutos;
+	            					sumAutos+","+
+	            					(recnum++);
 	            			
 	            			outStreamCar.println( record );  
 	            			autoTripID++;
@@ -585,7 +587,8 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	        					depEarly+","+
 	        					depLate+","+
 		    					2+","+
-            					sumAutos;
+            					sumAutos+","+
+            					(recnum++);
             			
 	        			outStreamCar.println( record );  
 	        			autoTripID++;
@@ -667,7 +670,8 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	                					0+","+
 		            					0+","+
 		            					(30+e)+","+
-		            					sumAutos;
+		            					sumAutos+","+
+		            					(recnum++);
 		            			
 		            			e++;
 	                			outStreamCar.println( record ); 
@@ -731,7 +735,8 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	                					0+","+
 		            					0+","+
 		            					(40+ee)+","+
-		            					sumAutos;
+		            					sumAutos+","+
+		            					(recnum++);
 		            			
 		            			
 	                			outStreamCar.println( record );  
@@ -794,7 +799,8 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
                     					0+","+
 		            					0+","+
 		            					(50+ee)+","+
-		            					sumAutos;
+		            					sumAutos+","+
+		            					(recnum++);
 		            			
 		            			ee++;
 
@@ -865,7 +871,8 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	            					0+","+
 	            					0+","+
 	            					6+","+
-	            					sumAutos;
+	            					sumAutos+","+
+	            					(recnum++);
 	            			
 	            			outStreamCar.println( record );  
 	            			autoTripID++;
@@ -934,7 +941,8 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	    					depEarly+","+
 	    					depLate+","+
 							7+","+
-        					sumAutos;
+        					sumAutos+","+
+        					(recnum++);
         			
 	    			outStreamCar.println( record );  
 	    			autoTripID++;
