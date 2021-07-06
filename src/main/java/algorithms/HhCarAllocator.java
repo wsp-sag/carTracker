@@ -57,8 +57,8 @@ public class HhCarAllocator implements HhCarAllocatorIf, Serializable {
         boolean optimalSolutionFound = false;
 
         //System.out.println("household = " + hh.getId());
-        solverType = "CLP_LINEAR_PROGRAMMING";
-		//solverType = "CBC_MIXED_INTEGER_PROGRAMMING";
+        //solverType = "CLP_LINEAR_PROGRAMMING";
+		solverType = "CBC_MIXED_INTEGER_PROGRAMMING";
         if(runMixedIntergerLP)
 			solverType = "CBC_MIXED_INTEGER_PROGRAMMING";
         

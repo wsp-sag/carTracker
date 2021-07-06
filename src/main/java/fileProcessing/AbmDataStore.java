@@ -168,7 +168,7 @@ public class AbmDataStore {
 		for ( int id : hhIds ) {
 			if ( id < min )
 				min = id;
-			if ( id > min )
+			if ( id > max )
 				max = id;
 		}
 		return new int[] { min, max };
