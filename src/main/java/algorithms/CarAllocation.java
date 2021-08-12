@@ -198,7 +198,7 @@ public class CarAllocation
 	private VehicleTypePreferences vehicleTypePreferences;
 	
 	private float unsatisfiedDemandDistancePenalty = 0;
-	private float repositionCostPerMile = 0;
+	//private float repositionCostPerMile = 0;
 	private float usualDrBonus = 0;
 	private float unusedCarBonus = 0;
 	private float minutesPerMile = 0;
@@ -228,7 +228,7 @@ public class CarAllocation
 		createPurposeTranslationMap();
 		String test = propertyMap.get(GlobalProperties.UNSAT_DEMAND_DISTANCE_PENALTY.toString());
 		unsatisfiedDemandDistancePenalty = Float.parseFloat(propertyMap.get(GlobalProperties.UNSAT_DEMAND_DISTANCE_PENALTY.toString()));
-		repositionCostPerMile = Float.parseFloat(propertyMap.get(GlobalProperties.CAR_REPOSITION_COST_PER_MILE.toString()));
+		//repositionCostPerMile = Float.parseFloat(propertyMap.get(GlobalProperties.CAR_REPOSITION_COST_PER_MILE.toString()));
 		usualDrBonus = Float.parseFloat(propertyMap.get(GlobalProperties.USUAL_DRIVER_BONUS.toString()));
 		minutesPerMile = Float.parseFloat(propertyMap.get(GlobalProperties.MINUTES_PER_MILE.toString()));
 		unusedCarBonus = Float.parseFloat(propertyMap.get(GlobalProperties.UNUSED_CAR_BONUS.toString()));
@@ -305,7 +305,6 @@ public class CarAllocation
         	ofVarsP = new MPVariable[NUM_P_VARIABLE_INDICES][persons.length][];
         	ofVarsJ = new MPVariable[NUM_J_VARIABLE_INDICES][numAutos];
 
-    		float repoCostForHh = repositionCostPerMile;
 
 
     		for ( int j=0; j < numAutos; j++ )     {
@@ -339,25 +338,6 @@ public class CarAllocation
         		float[] distanceFromEndTrip = sharedDistanceObject.getOffpeakDistanceFromTaz(destTaz);
 
 
-        		float autoOperatingCost = repositionCostPerMile;
-        		float costOfCurrentTrip = aTrip.getDistance()*autoOperatingCost;
-        		
-        		float reposCostHD = repoCostForHh*(distanceFromHome[origTaz]);
-        		float reposCostOH = repoCostForHh*(distanceToHome[destTaz]);
-
-        		if(hh.getIfAvHousehold() == 0 ){
-        			reposCostHD = NON_AV_REPO_COST;
-        			reposCostOH = NON_AV_REPO_COST;
-        			repoCostForHh = NON_AV_REPO_COST;
-        		}
-
-
-        		//Set repo cost to 0 for first/last trip with person
-        		if(ao == PurposeCategories.HOME.getIndex())
-        			reposCostHD= costOfCurrentTrip;
-
-        		if(ad == PurposeCategories.HOME.getIndex())
-        			reposCostOH= costOfCurrentTrip;
 
 
         		// IJ Variables (trip and auto)
@@ -401,7 +381,31 @@ public class CarAllocation
 					}
         							
 					int vehTypeCategory = vehicleTypePreferences.getCategory(fuelType, bodyType);
+
 					
+	        		float repoCostForHh = vehicleTypePreferences.getOperatingCostDisutil(fuelType, bodyType);
+	        		
+	        		float autoOperatingCost = repoCostForHh;
+	        		float costOfCurrentTrip = aTrip.getDistance()*autoOperatingCost;
+	        		
+	        		float reposCostHD = repoCostForHh*(distanceFromHome[origTaz]);
+	        		float reposCostOH = repoCostForHh*(distanceToHome[destTaz]);
+
+	        		if(hh.getIfAvHousehold() == 0 ){
+	        			reposCostHD = NON_AV_REPO_COST;
+	        			reposCostOH = NON_AV_REPO_COST;
+	        			repoCostForHh = NON_AV_REPO_COST;
+	        		}
+
+
+	        		//Set repo cost to 0 for first/last trip with person
+	        		if(ao == PurposeCategories.HOME.getIndex())
+	        			reposCostHD= costOfCurrentTrip;
+
+	        		if(ad == PurposeCategories.HOME.getIndex())
+	        			reposCostOH= costOfCurrentTrip;
+
+	        		
 					double coeffValue = -usualDrBonus*usualDrDummy + carAllocationPreference + (-0.01*diffPnumAuto) + (-0.001*vehTypeCategory) + (-0.1*costOfCurrentTrip);
 
 					if(logHhId == hh.getId() )
@@ -469,26 +473,10 @@ public class CarAllocation
 	        		float distanceToHomeFromEndOfCurrent = distanceToHome[destTaz];
 
 
-	        		float reposCostToHome = repoCostForHh*(distanceHomeToNextOrig+distanceToHomeFromEndOfCurrent);
-	        		float reposCostToNextTripOrigSik = 0;
-	        		float reposCostToNextTripOrigGik = 0;
-	        		// update repositioning cost if not pair Li
-	        		if(!pairLi){
-	        			reposCostToNextTripOrigSik=repoCostForHh*distanceToNextOrig;
-	        			reposCostToNextTripOrigGik=repoCostForHh*distanceToNextOrig;
-
-	        		}
-	        		// TODO: set repositioning cost to a high value for non-AV cars
 
 	        		float penaltyForGik = 0;
 	        		if(pairLi && samePerson)
 	        			penaltyForGik= intraZonalGikSamePersonPenalty;
-
-	        		//reposition cost to avoid switches for intra-zonal
-	        		if(pairLi && ((ad == PurposeCategories.HOME.getIndex()&& nextAo != PurposeCategories.HOME.getIndex())|| nextAo == PurposeCategories.HOME.getIndex()&& ad != PurposeCategories.HOME.getIndex()) ){
-	        			reposCostToNextTripOrigSik=repoCostForHh*distanceToNextOrig;
-	        			reposCostToNextTripOrigGik=repoCostForHh*distanceToNextOrig;
-	        		}
 
 	        		// calculate parking cost at destination (for Sik)
 	        		if( MANDATORY_PURPOSE_INDICES.contains( ad ) )
@@ -510,13 +498,6 @@ public class CarAllocation
 	        		if(nextAo == 0)
 	        			parkCostGik = 0;
 
-	        		// set repositioning cost to very high value if non-AV hh and not starting in the same taz and if the persons are not same for two trips
-	        		if(hh.getIfAvHousehold() == 0 ){
-	        			reposCostToNextTripOrigGik = NON_AV_REPO_COST;
-	        			reposCostToHome = NON_AV_REPO_COST;
-	        			if(!pairLi || !samePerson)
-	        				reposCostToNextTripOrigSik = NON_AV_REPO_COST;
-	        		}
 	        		for ( int j=0; j < numAutos; j++ )     {
 		        		//F2, F4
 
@@ -540,6 +521,36 @@ public class CarAllocation
 	        				}
 	        			}
 
+
+	        			int fuelType = hhVehFuelTypes[j];
+	        			int bodyType = hhVehBodyTypes[j];
+		        		float repoCostForHh = vehicleTypePreferences.getOperatingCostDisutil(fuelType, bodyType);
+	        			
+		        		float reposCostToHome = repoCostForHh*(distanceHomeToNextOrig+distanceToHomeFromEndOfCurrent);
+		        		float reposCostToNextTripOrigSik = 0;
+		        		float reposCostToNextTripOrigGik = 0;
+		        		// update repositioning cost if not pair Li
+		        		if(!pairLi){
+		        			reposCostToNextTripOrigSik=repoCostForHh*distanceToNextOrig;
+		        			reposCostToNextTripOrigGik=repoCostForHh*distanceToNextOrig;
+
+		        		}
+
+		        		//reposition cost to avoid switches for intra-zonal
+		        		if(pairLi && ((ad == PurposeCategories.HOME.getIndex()&& nextAo != PurposeCategories.HOME.getIndex())|| nextAo == PurposeCategories.HOME.getIndex()&& ad != PurposeCategories.HOME.getIndex()) ){
+		        			reposCostToNextTripOrigSik=repoCostForHh*distanceToNextOrig;
+		        			reposCostToNextTripOrigGik=repoCostForHh*distanceToNextOrig;
+		        		}
+
+		        		// set repositioning cost to very high value if non-AV hh and not starting in the same taz and if the persons are not same for two trips
+		        		if(hh.getIfAvHousehold() == 0 ){
+		        			reposCostToNextTripOrigGik = NON_AV_REPO_COST;
+		        			reposCostToHome = NON_AV_REPO_COST;
+		        			if(!pairLi || !samePerson)
+		        				reposCostToNextTripOrigSik = NON_AV_REPO_COST;
+		        		}
+
+		        		
 	        			ofVarsIJK[INDEX_SameTripParkDi ][i][k][j] = solver.makeNumVar( lowerBoundS, uppperBoundS, ( name = "ParkDi_"+i+"_"+k+"_"+j ) );
 	                    objective.setCoefficient( ofVarsIJK[INDEX_SameTripParkDi][i][k][j], reposCostToNextTripOrigSik + parkCostSik);
 	                    ofCoeffList.add( (float) (reposCostToNextTripOrigSik + parkCostSik) );

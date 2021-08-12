@@ -27,7 +27,7 @@ public class HhCarAllocator implements HhCarAllocatorIf, Serializable {
     public static final int MIN_SIMULATION_TIME = 0;
     public static final float MIN_LOW_DECIMAL_POSITIVE = 0.00001f;
 	public static final int[] MAX_SIMULATION_TIME = { MAX_SIMULATION_HOURS[0]*60, MAX_SIMULATION_HOURS[1]*60, MAX_SIMULATION_HOURS[2]*60 };
-	public static final int MAX_ITERATIONS = 3;
+	public static final int MAX_ITERATIONS = 1;
 	
 	private CarAllocation allocator;
 	private int[] numLpFailures = new int[MAX_ITERATIONS];
@@ -107,9 +107,11 @@ public class HhCarAllocator implements HhCarAllocatorIf, Serializable {
             			if(carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > roundUpThresholdXij ){
             					xijFixFlag[i][j] = 1;
             					xijIntergerization[i][j] = 1;
+                    			if(carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] < 1 && carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > 0  && carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > MIN_LOW_DECIMAL_POSITIVE ) 
+                    				numVarChanged++;            		
             			}
-            			if(carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] < 1 && carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > 0  && carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > MIN_LOW_DECIMAL_POSITIVE ) 
-            				numVarChanged++;            		
+//            			if(carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] < 1 && carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > 0  && carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > MIN_LOW_DECIMAL_POSITIVE ) 
+//            				numVarChanged++;            		
 
             		}
 
@@ -281,10 +283,12 @@ public class HhCarAllocator implements HhCarAllocatorIf, Serializable {
 	                			if(carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] == 1){
 	                				xijFixFlag[i][j] = 1;
 	                        		xijIntergerization[i][j] = 1;
+		                			if(carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] < 1 && carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > 0 && carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > MIN_LOW_DECIMAL_POSITIVE && unsatisDemandResultsIter[i]<roundUpThresholdXij ) 
+		                				numVarChanged++;         			
 	                			}	                			
 	                				
-	                			if(carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] < 1 && carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > 0 && carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > MIN_LOW_DECIMAL_POSITIVE && unsatisDemandResultsIter[i]<roundUpThresholdXij ) 
-	                				numVarChanged++;         			
+//	                			if(carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] < 1 && carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > 0 && carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > MIN_LOW_DECIMAL_POSITIVE && unsatisDemandResultsIter[i]<roundUpThresholdXij ) 
+//	                				numVarChanged++;         			
 	                			                			
 	                			for(int k = i+1; k < hh.getAutoTrips().size(); k++){                				
 	                    			if(carLinkingResults[CarAllocation.INDEX_SameTripParkDi][j][i][k]>maxSikj){
@@ -392,10 +396,12 @@ public class HhCarAllocator implements HhCarAllocatorIf, Serializable {
                 			if(carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] == 1){
                 				xijFixFlag[i][j] = 1;
                         		xijIntergerization[i][j] = 1;
+                    			if(carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] < 1 && carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > 0 && carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > MIN_LOW_DECIMAL_POSITIVE  && unsatisDemandResultsIter[i]<roundUpThresholdXij ) 
+                    				numVarChanged++;
                 			}
                 				
-                			if(carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] < 1 && carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > 0 && carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > MIN_LOW_DECIMAL_POSITIVE  && unsatisDemandResultsIter[i]<roundUpThresholdXij ) 
-                				numVarChanged++;
+//                			if(carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] < 1 && carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > 0 && carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > MIN_LOW_DECIMAL_POSITIVE  && unsatisDemandResultsIter[i]<roundUpThresholdXij ) 
+//                				numVarChanged++;
                 			
                 			for(int k = i+1; k < hh.getAutoTrips().size(); k++){                				
                     			if(carLinkingResults[CarAllocation.INDEX_SameTripParkDi][j][i][k]>maxSikj && sikjFixFlag[j][i][k] != 1 ){
@@ -446,13 +452,15 @@ public class HhCarAllocator implements HhCarAllocatorIf, Serializable {
             		break;
             	
             }
+            else {
             
-            numLpFailures[iterNum]++;
+		        numLpFailures[iterNum]++;
+		        
+		        
+		        logger.info("Main lp failed for " + hh.getId());
+		        //logger.info(" " );
             
-            
-            logger.info("Main lp failed for " + hh.getId());
-            //logger.info(" " );
-            
+            }
             
             iterNum++;
         	
