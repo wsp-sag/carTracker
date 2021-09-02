@@ -285,6 +285,14 @@ public class CarAllocation
         	List<Trip> trips = hh.getTrips();
         	List<AutoTrip> autoTrips = hh.getAutoTrips();
 
+        	int[] persTripCounts = new int[persons.length];
+        	int[] tripIdForDriver = new int[autoTrips.size()];
+        	for ( int i=0; i < autoTrips.size();i++ ) {
+        		int pnum = autoTrips.get(i).getPnum();
+        		tripIdForDriver[i] = persTripCounts[pnum]; 
+        		persTripCounts[pnum]++;
+        	}
+        	
         	int numAutos = hh.getNumAutos();
         	int homeMaz = hh.getHomeMaz();
         	int[] hhVehFuelTypes = hh.getHhVehFuelTypes();
@@ -306,13 +314,12 @@ public class CarAllocation
         	ofVarsJ = new MPVariable[NUM_J_VARIABLE_INDICES][numAutos];
 
 
-
+        	
     		for ( int j=0; j < numAutos; j++ )     {
     			ofVarsJ[INDEX_UnusedCar ][j] = solver.makeNumVar( 0.0, 1, ( name = "CarUnused_"+j ) );
                 objective.setCoefficient( ofVarsJ[INDEX_UnusedCar][j], unusedCarBonus);
                 ofCoeffList.add(unusedCarBonus );
         		variableNameList.add( name );
-
     		}
         	for ( int i=0; i < autoTrips.size();i++ ) {
 
@@ -443,6 +450,7 @@ public class CarAllocation
 
         		//IK variables
         		for ( int k = i+1; k < autoTrips.size(); k++){
+        			
 	        		// get next auto trip
         			AutoTrip nextATrip = autoTrips.get(k);
 	        		int origMazNextTrip = -1;
@@ -465,13 +473,18 @@ public class CarAllocation
 	        		if(destTaz == origTazNextTrip)
 	        			pairLi = true;
 
-	        		if(aTrip.getPnum() == nextATrip.getPnum())
+        			boolean subsequentTrip = false;
+	        		if(aTrip.getPnum() == nextATrip.getPnum()) {
 	        			samePerson = true;
+	        			if ( tripIdForDriver[k] - tripIdForDriver[i] == 1 )
+	        				subsequentTrip = true;
+	        		}
 
-	        		float distanceToNextOrig = distanceFromEndTrip[origTazNextTrip];
+        				
+
+        			float distanceToNextOrig = distanceFromEndTrip[origTazNextTrip];
 	        		float distanceHomeToNextOrig = distanceFromHome[origTazNextTrip];
 	        		float distanceToHomeFromEndOfCurrent = distanceToHome[destTaz];
-
 
 
 	        		float penaltyForGik = 0;
@@ -546,7 +559,7 @@ public class CarAllocation
 		        		if(hh.getIfAvHousehold() == 0 ){
 		        			reposCostToNextTripOrigGik = NON_AV_REPO_COST;
 		        			reposCostToHome = NON_AV_REPO_COST;
-		        			if(!pairLi || !samePerson)
+		        			if(!pairLi || !samePerson || !subsequentTrip)
 		        				reposCostToNextTripOrigSik = NON_AV_REPO_COST;
 		        		}
 
