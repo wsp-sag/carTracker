@@ -71,9 +71,9 @@ public class CarAllocatorMain {
     	vehicleTypePreferences.readPreferences( filename );
     	        
         if(runDistributed)
-        	carAllocationResults = runCarAllocation_v2_distributed( propertyMap, logger, parameterInstance ,  geogManager, socec, vehicleTypePreferences);
+        	carAllocationResults = runCarAllocation_v2_distributed( propertyMap, logger, parameterInstance, geogManager, socec, vehicleTypePreferences);
         else        	
-        carAllocationResults= runCarAllocation_v2_mono(propertyMap, logger, parameterInstance, geogManager, socec, vehicleTypePreferences);
+        	carAllocationResults= runCarAllocation_v2_mono(propertyMap, logger, parameterInstance, geogManager, socec, vehicleTypePreferences);
         
         //if ( debugHhId >= 0 )
         //    debugCarAllocation_v2( propertyMap, logger, parametersFile, debugHhId, startOfDayMinute );       
@@ -113,7 +113,7 @@ public class CarAllocatorMain {
 	
 	private List<HouseholdCarAllocation> runCarAllocation_v2_distributed( Map<String, String> propertyMap, 
 			Logger logger, ParameterReader parameterInstance, GeographyManager geogManager, SocioEconomicDataManager socec, VehicleTypePreferences vehicleTypePreferences ) {
-		
+				
 //        JPPFNodeForwardingMBean forwarder = null;
 //        NodeSelector masterSelector = null;
         JPPFClient myClient =  new JPPFClient();        
@@ -153,8 +153,9 @@ public class CarAllocatorMain {
 		
         
 		int numHhsPerJob = Integer.valueOf( propertyMap.get( GlobalProperties.NUM_HHS_PER_JOB.toString() ) );
+		int numHhPartitions = Integer.valueOf( propertyMap.get( GlobalProperties.NUM_HH_PARTITIONS.toString() ) );
+		int numHhsPerPartition = (maxHhId - minHhId)/numHhPartitions;
 
-		logger.info( "running Car allocation for hhids: [" + minHhId + "," + maxHhId + "] ..." );
 
 		DataProvider dataProvider = new MemoryMapDataProvider();
         dataProvider.setParameter( "parameterInstance", parameterInstance );
@@ -171,20 +172,41 @@ public class CarAllocatorMain {
         
 		// solve schedule adjustment problems for the indicated household ids.
 		// save in a separate list the HouseholdAdjustment objects for households where the LP failed
-        List<Object> resultList = ParallelHelper.PARALLEL_HELPER_DISTRIBUTER.solveDistributed( CarAllocationTask.MODEL_LABEL, new CarAllocationTask(0,0), myClient, dataProvider, minHhId, maxHhId, numHhsPerJob );
-       	for ( Object result : (List<Object>)resultList ) {
+   		int startHh = minHhId;
+   		int endHh = minHhId + numHhsPerPartition;
+       	for ( int p=0; p < numHhPartitions; p++ ) {
+
+    		long start = System.currentTimeMillis();
        		
-       		List<Object> taskResultList = (List<Object>)result;       		
-       		List<HouseholdCarAllocation> taskResultsList = (List<HouseholdCarAllocation>)taskResultList.get(0);
+    		logger.info( "running Car allocation for partition " + (p+1) + " of " + numHhPartitions + ", hhids: [" + startHh + "," + endHh + "] ..." );
        		
-       		hhAllocationResultsList.addAll( taskResultsList );
-       		
-       		for ( HouseholdCarAllocation hhAdj : taskResultsList )
-     			if ( hhAdj.getOptimalSolutionIterations() > 0 )
-     				lpFailedList.get( hhAdj.getOptimalSolutionIterations()-1 ).add( hhAdj );
-       		
+	        List<Object> resultList = ParallelHelper.PARALLEL_HELPER_DISTRIBUTER.solveDistributed( CarAllocationTask.MODEL_LABEL, new CarAllocationTask(0,0), myClient, dataProvider, startHh, endHh, numHhsPerJob );
+	       	for ( Object result : (List<Object>)resultList ) {
+	       		
+	       		List<Object> taskResultList = (List<Object>)result;       		
+	       		List<HouseholdCarAllocation> taskResultsList = (List<HouseholdCarAllocation>)taskResultList.get(0);
+	       		
+	       		hhAllocationResultsList.addAll( taskResultsList );
+	       		
+	       		for ( HouseholdCarAllocation hhAdj : taskResultsList )
+	     			if ( hhAdj.getOptimalSolutionIterations() > 0 )
+	     				lpFailedList.get( hhAdj.getOptimalSolutionIterations()-1 ).add( hhAdj );
+	       		
+	       	}
+
+			logger.info ( "partition " + (p+1) + " of " + numHhPartitions + " finished in " + (int)((System.currentTimeMillis() - start)/1000.0) + " seconds." );
+
+	   		startHh = endHh;
+	   		if ( startHh == maxHhId )
+	   			break;
+
+	   		endHh += numHhsPerPartition;
+	   		if ( endHh > maxHhId )
+	   			endHh = maxHhId;
+
        	}
-		
+       	
+       	
        	for ( int i=0; i < HhCarAllocator.MAX_ITERATIONS; i++ )
        		lpFailedList.get(i).sort( (v1, v2) -> v1.getHousehold().getNumIndivTripRecords() - v2.getHousehold().getNumIndivTripRecords() < 0.0 ? -1 : v1.getHousehold().getNumIndivTripRecords() - v2.getHousehold().getNumIndivTripRecords() > 0.0 ? 1 : 0 );
        	
@@ -272,7 +294,7 @@ public class CarAllocatorMain {
 		
 	    CarAllocatorMain mainObj = new CarAllocatorMain();
 	
-		System.out.println ( "CarTracker, 12Aug2021, v3.1, starting." );
+		System.out.println ( "CarTracker, 01Sep2021, v3.2, starting." );
 	    
 		ResourceBundle rb = null;
 		if ( args.length >=0 ) {
@@ -306,4 +328,3 @@ public class CarAllocatorMain {
 
 
 }
-

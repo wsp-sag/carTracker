@@ -23,7 +23,8 @@ public enum GlobalProperties {
 	ROUND_UP_THRESHOLD						("round.up.threshold",18),
 	INTRA_ZONAL_GIK_SAME_PERSON				("intra.zonal.car.repo.same.person.penalty",19),
 	RUN_MIXED_INTEGER_LP					("start.with.mixed.integer.programming",20),
-	ABM_TRIP_DATA_FILE_MODE_FIELD_KEY		("trip.mode.field",21);
+	ABM_TRIP_DATA_FILE_MODE_FIELD_KEY		("trip.mode.field",21),
+	NUM_HH_PARTITIONS						("num.partitions",22);
 
 
 	private final String label;
