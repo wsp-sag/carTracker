@@ -37,14 +37,14 @@ import objects.Trip;
 
 public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutputFilesIf {
 
-	public static final int EMPTY_TRIP_MODE = 5;
-	
+	private static final int TAXI_TNC_MODE_INDEX = 4;
+	public static final int EMPTY_TRIP_MODE = 5;	
 	private static final int MAX_PERSON_TYPE = 8;
+	
 	private static final double[] distanceBoundaries = { 2.0, 5.0, 10.0, 20.0, 30.0, 50.0, 75.0, 100.0, 9999 };
 	private static final String[] distanceBins = { "0-2", "2-5", "5-10", "10-20", "20-30", "30-50", "50-75", "75-100", "100+" };
 	private static final String[] modes = { "sov", "hov2", "hov3+" };
 
-	private static final int TAXI_TNC_MODE_INDEX = 4;
 
     public static float threhsoldRoundUp = 0.7f;
 	private float tripExpansionFactor = 1.0f;
@@ -71,144 +71,100 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 //	private String[] otherTripTableNames;
 //	private String[] otherTripTableFiles;
 	
+	private final GeographyManager geogManager;
+	private final SharedDistanceMatrixData sharedDistanceObject;
+	private final SocioEconomicDataManager socec;
+	private final HashMap<String, String> propertyMap;
+	private final ConstantsIf constants;
+	private final VehicleTypePreferences vehicleTypePreferences;
 
-	private float[][][][] cavTripTables;
+    PrintWriter outStreamTrip = null;
+    PrintWriter outStreamCar = null;
+    PrintWriter outStreamHh = null;
+    PrintWriter outStreamPurpSummary = null;
+    PrintWriter outStreamPersTypeSummary = null;
+    PrintWriter outStreamDistSummary = null;
+
+    private float totalExtraWaitTime = 0;
+    private float totalEarlyDepTime = 0;
+    private int totalNonSingularCases = 0;
+    private int totalCars = 0;
+    private int totalNonAVCars = 0;
+    private int totalAVCars = 0;
+    private int globalLoop = 0;
+    private int totalDemand = 0;	
+    private int totalAutoTrips = 0;
+    private int totalAutoNonAVTrips = 0;
+    private int totalAutoAVTrips = 0;
+    private int totalLoadedTripsAV = 0;
+    private int totalEmptyTripsAV = 0;
+    private float totalVMT = 0;
+    private float totalAVVMT = 0;
+    private float loadedAVVMT = 0;
+    private float emptyAVVMT = 0;
+    private int totalUsedCars = 0;
+    private int totalUsedNonAVCars = 0;
+    private int totalUsedAVCars = 0;
+    private int[] totalUnusedCars = new int[3];
+    private double[] probChagingCarOwnership = null;
+
+    private int sumAutos = 0;
+    private int sumTripSatisfied = 0;
+    private int sumTripNotSatisfied = 0;
+    private int recnum = 1;
+    
+	private final List<Integer> tripPurposes = PurposeCategories.getPurposeIndices();
+	private List<Integer> vehTypes;
+	private Map<Integer, Integer> purposeIndexMap;
+	private Map<Integer, Integer> vehTypeIndexMap;
+	private int[][] periodIntervals;
+	private String[] periodLabels;
+	
+    private int[][][] tripsByVehTypeByPurpose;
+    private int[][][] tripsByVehTypeByPersonType;
+    private int[][][] tripsByVehTypeByDistanceBin;
+    
+    private int unsatisfiedTripModeCode;
+    private double addCarFactor;
+    private double subtractCarFactor;
+    private float msaFactor;
+    
+    private int numModeTables;
+    private float[][][][] cavTripTables;
 	private float[][][][] nonCavTripTables;
 
+    private int[] tazValues;
+    private int[] tazValuesOrder;
+    private int[] extNumbers;
+    private MatrixType matrixType;
+    
 	private boolean separateCavFiles = false;
-
+	private boolean matrixFilesOutput = false;
 	
-    public void writeCarAllocationOutputFile( Logger logger, HashMap<String, String> propertyMap, 
-    	String outputTripListFilename, String outputDisaggregateCarUseFileName, String outputProbCarChangeFileName,
-    	String outputVehTypePurposeSummaryFileName, String outputVehTypePersTypeSummaryFileName, String outputVehTypeDistanceSummaryFileName,
-    	List<HouseholdCarAllocation> hhCarAllocationResultsList, GeographyManager geogManager,
-    	SharedDistanceMatrixData sharedDistanceObject, SocioEconomicDataManager socec, ConstantsIf constants, VehicleTypePreferences vehicleTypePreferences) {
+	public WriteCarAllocationOutputFilesMag( HashMap<String,String> propertyMap, GeographyManager geogManager, SharedDistanceMatrixData sharedDistanceObject,
+					SocioEconomicDataManager socec, ConstantsIf constants, VehicleTypePreferences vehicleTypePreferences ) {
 
-
-    	Map<Integer, Integer> purposeIndexMap = new HashMap<>();
-    	List<Integer> tripPurposes = PurposeCategories.getPurposeIndices();
-    	int index = 0;
-    	for ( int purp : tripPurposes )
-    		purposeIndexMap.put( purp, (index++) );
-    	
-    	Map<Integer, Integer> vehTypeIndexMap = new HashMap<>();
-    	List<Integer> vehTypes = vehicleTypePreferences.getCategories();
-    	index = 0;
-    	for ( int type : vehTypes )
-   			vehTypeIndexMap.put( type, (index++) );
-    	
-    	int[][][] tripsByVehTypeByPurpose = new int[modes.length][vehTypeIndexMap.values().size()][tripPurposes.size()];
-    	int[][][] tripsByVehTypeByPersonType = new int[modes.length][vehTypeIndexMap.values().size()][MAX_PERSON_TYPE+1];
-    	int[][][] tripsByVehTypeByDistanceBin = new int[modes.length][vehTypeIndexMap.values().size()][distanceBoundaries.length];
-    	              
-        threhsoldRoundUp = Float.parseFloat(propertyMap.get(GlobalProperties.ROUND_UP_THRESHOLD.toString()));
-        tripExpansionFactor = 1.0f/Float.parseFloat(propertyMap.get("global.proportion"));
-        ifExternalStationsIncluded = Boolean.valueOf(propertyMap.get("include.external.stations")); 
-
-
-		String separateCavFilesString = propertyMap.get( SEPARATE_CAV_TRIP_TABLES_KEY );
-		if ( separateCavFilesString != null )
-			separateCavFiles = Boolean.valueOf( separateCavFilesString );
-
-		numberOfPeriods = Integer.valueOf( propertyMap.get(NUM_OUTPUT_PERIODS_KEY));
-		
-		String[] str =  propertyMap.get( "output.trip.matrix.auto.mode.codes" ).trim().split(",");
-		autoModeCodes = new int[str.length];
-		for(int i=0;i<str.length;i++)
-			autoModeCodes[i]=Integer.parseInt(str[i]);
-		
-		String tripTableNamesString = propertyMap.get( AUTO_MODE_TABLE_NAMES_KEY );
-		autoTripTableNames = utility.Parsing.getStringArrayFromCsvString( tripTableNamesString );
-		
-		tripTableFiles = new String[numberOfPeriods];
-
-//		int numVotSegments = Integer.valueOf( propertyMap.get( "output.number.vot.segments" ) );
-//		if ( numVotSegments > 1 ) {
-//			votThresholds = new int[numVotSegments-1];
-//			for(int i=0;i<numVotSegments-1;i++){
-//				String tempKey = "output.trip.matrices.vot"+String.valueOf(i+1)+".threshold";
-//				votThresholds[i]=Integer.valueOf( propertyMap.get(tempKey) );
-//			}
-//			numberOfVotCategories = numVotSegments;
-//		}
-		
-
-
-
-		tripTableFiles[0] = propertyMap.get("result.path") + propertyMap.get( TRIP_MATRIX_EA_FILE_KEY );
-		tripTableFiles[1] = propertyMap.get("result.path") + propertyMap.get( TRIP_MATRIX_AM_FILE_KEY );
-		tripTableFiles[2] = propertyMap.get("result.path") + propertyMap.get( TRIP_MATRIX_MD_FILE_KEY );
-		tripTableFiles[3] = propertyMap.get("result.path") + propertyMap.get( TRIP_MATRIX_PM_FILE_KEY );
-		tripTableFiles[4] = propertyMap.get("result.path") + propertyMap.get( TRIP_MATRIX_EV_FILE_KEY );
-		
-		// number of modes in output tables = autoTripTableNames.length (typically sov,hov2,hov3+,taxi) + empty trips = 4 + 1.
-		int numModeTables = autoTripTableNames.length;
-		if ( separateCavFiles ) {
-			numModeTables =	numModeTables + 1;
-			cavTripTables = new float[numberOfPeriods][numModeTables*numberOfVotCategories][geogManager.getTazValues().length][geogManager.getTazValues().length];
-		}
-		nonCavTripTables = new float[numberOfPeriods][numModeTables*numberOfVotCategories][geogManager.getTazValues().length][geogManager.getTazValues().length];
-		
-		int[][] periodIntervals = new int[5][2];
-		periodIntervals[0][0] = Integer.valueOf( propertyMap.get( EA_PERIOD_START_KEY ) );
-		periodIntervals[0][1] = Integer.valueOf( propertyMap.get( EA_PERIOD_END_KEY ) );
-		periodIntervals[1][0] = Integer.valueOf( propertyMap.get( AM_PERIOD_START_KEY ) );
-		periodIntervals[1][1] = Integer.valueOf( propertyMap.get( AM_PERIOD_END_KEY ) );
-		periodIntervals[2][0] = Integer.valueOf( propertyMap.get( MD_PERIOD_START_KEY ) );
-		periodIntervals[2][1] = Integer.valueOf( propertyMap.get( MD_PERIOD_END_KEY ) );
-		periodIntervals[3][0] = Integer.valueOf( propertyMap.get( PM_PERIOD_START_KEY ) );
-		periodIntervals[3][1] = Integer.valueOf( propertyMap.get( PM_PERIOD_END_KEY ) );
-		periodIntervals[4][0] = Integer.valueOf( propertyMap.get( EV_PERIOD_START_KEY ) );
-		periodIntervals[4][1] = Integer.valueOf( propertyMap.get( EV_PERIOD_END_KEY ) );
-		
-
-		String matrixFilesOutputString = propertyMap.get( OUTPUT_TRIP_TABLES_KEY );
-		boolean matrixFilesOutput = Boolean.valueOf( matrixFilesOutputString );
-		
-
-		String formatString = propertyMap.get( OUTPUT_TRIP_TABLE_FORMAT_KEY );
-		MatrixType matrixType = MatrixType.lookUpMatrixType( formatString );
-        MatrixDataServer matrixDataServer = new MatrixDataServer();
-        matrixHandler = new MatrixDataLocalHandler(matrixDataServer, matrixType);
-
-    int[] tazIndices = geogManager.getTazIndices();
-
-    int[] tazValues = geogManager.getTazValues();
-    int[] tazValuesOrder = IndexSort.indexSort( tazValues );
-    int[] extNumbers = new int[tazValues.length+1];
-   	
-    for ( int i=0; i < tazValues.length; i++ ) {
-        int k = tazValuesOrder[i];
-        extNumbers[i+1] = tazValues[k];
-    }		
-
-    String[] periodLabels = new String[]{ "early", "am", "midday", "pm", "late" };
-
-
-		int globalLoop = Integer.parseInt(propertyMap.get("global.loop"));
-		
-	    double[] probChagingCarOwnership = null;
-	    if(globalLoop > 1)
-	    	probChagingCarOwnership = getProbabilityOfChangingCarOwnership( propertyMap.get("hh.car.ownership.correction.file"),propertyMap.get("hh.id.field"),propertyMap.get("hh.prob.car.change.field")  );
-
-
-      PrintWriter outStreamTrip = null;
-      PrintWriter outStreamCar = null;
-      PrintWriter outStreamHh = null;
-      PrintWriter outStreamPurpSummary = null;
-      PrintWriter outStreamPersTypeSummary = null;
-      PrintWriter outStreamDistSummary = null;
+		this.geogManager = geogManager;
+		this.sharedDistanceObject = sharedDistanceObject;
+		this.socec = socec;
+		this.propertyMap = propertyMap;
+		this.constants = constants;
+		this.vehicleTypePreferences = vehicleTypePreferences;
+	
+    	String outputTripListFilename = propertyMap.get("output.trip.file");
+    	String outputDisaggregateCarUseFileName = propertyMap.get("output.car.use.file");
+        String outputVehTypePurposeSummaryFileName = propertyMap.get("output.vehicle.type.purpose.summary.file");
+        String outputVehTypePersTypeSummaryFileName = propertyMap.get("output.vehicle.type.perstype.summary.file");
+        String outputVehTypeDistanceSummaryFileName = propertyMap.get("output.vehicle.type.distance.summary.file");	    	
+        
 	    try {
+	    	
 	    	outStreamTrip = new PrintWriter( new BufferedWriter( new FileWriter( outputTripListFilename ) ) );
 	        String header1 = "hhid,pnum,tripid,tripRecNum,mode,hhAutoId,vehNum,vehTypeCategory,vehFuelType,vehBodyType,origPurp,destPurp,origMaz,destMaz,origTaz,destTaz,tripDistance,tripDistanceFromHome,tripDistanceToHome,plannedDepartureTime,departureEarly,departureLate,finalDeparture, finalArrival,x1,x2,x3,x4,unsatisfiedResult,singular,numIterationIntegerizing";
-	        outStreamTrip.println( header1 );   
+	        outStreamTrip.println( header1 );
 	        outStreamCar = new PrintWriter( new BufferedWriter( new FileWriter( outputDisaggregateCarUseFileName ) ) );
 	        String header2 = "totalDemand,hhid,carId,aVStatus,autoTripId,autoHhTripId,tripRecNum,tripVehNum,driverId,origPurp,destPurp,origMaz,destMaz,origTaz,destTaz,tripMode,finalMode,carRepositionType,origHome,destHome,tripDistance,distanceFromHomeToOrig,distanceFromHomeToDest,plannedDeparture,finalDeparture,finalArrival,departureEarly,departureLate,recType,sumAutos,recnum";
-	        //String header2 = "totalDemand,hhid,carId,aVStatus,autoTripId,autoHhTripId,tripRecNum,tripVehNum,driverId,origPurp,destPurp,origMaz,destMaz,origTaz,destTaz,tripMode,finalMode,carRepositionType,origHome,destHome,tripDistance,distanceFromHomeToOrig,distanceFromHomeToDest,plannedDeparture,finalDeparture,finalArrival,departureEarly,departureLate,parkDurationAtDestination,ParkCostAtDestination,parkDurationAtNextOrigin,parkCostAtNextOrigin";
 	        outStreamCar.println( header2 );   
-	        outStreamHh = new PrintWriter( new BufferedWriter( new FileWriter( outputProbCarChangeFileName ) ) );
-	        String header3 = "hhid,hidAcrossSample,prevIterationCarChangeProb,probCarOwnershipChange,msaFactor";
-	        outStreamHh.println( header3 );
 	        
 	        if ( outputVehTypePurposeSummaryFileName != null && outputVehTypePurposeSummaryFileName.length() > 0 )
 	        	outStreamPurpSummary = new PrintWriter( new BufferedWriter( new FileWriter( outputVehTypePurposeSummaryFileName ) ) );
@@ -223,45 +179,248 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	        System.exit(-1);;
 	    }       
 
-	    int totalAutoTrips = 0;
-	    int totalAutoNonAVTrips = 0;
-	    int totalAutoAVTrips = 0;
-	    int totalLoadedTripsAV = 0;
-	    int totalEmptyTripsAV = 0;
-	    float totalVMT = 0;
-	    float totalAVVMT = 0;
-	    float loadedAVVMT = 0;
-	    float emptyAVVMT = 0;
-	    float totalExtraWaitTime = 0;
-	    float totalEarlyDepTime = 0;
-	    int totalCars = 0;
-	    int totalNonAVCars = 0;
-	    int totalAVCars = 0;
-	    int totalUsedCars = 0;
-	    int[] totalUnusedCars = new int[3];
-	    int totalUsedNonAVCars = 0;
-	    int totalUsedAVCars = 0;
-	    int totalDemand = 0;
-	    int totalNonSingularCases = 0;
-	    int carSufficiencyLevel = -1;
 	    
-	    
-	    
-	    int sumAutos = 0;
-        int sumTripSatisfied = 0;
-        int sumTripNotSatisfied = 0;
-        int recnum = 1;
-        
-	    
-	    int totalDemandMet = 0;	    
-	    double addCarFactor = Double.parseDouble(propertyMap.get("add.car.factor"));
-	    double subtractCarFactor = Double.parseDouble(propertyMap.get("subtract.car.factor"));
-	    
-		int taxiModeCode = Integer.parseInt(propertyMap.get("taxi.mode.code"));
+    	purposeIndexMap = new HashMap<>();
+    	int index = 0;
+    	for ( int purp : tripPurposes )
+    		purposeIndexMap.put( purp, (index++) );
+    	
+    	vehTypeIndexMap = new HashMap<>();
+    	vehTypes = vehicleTypePreferences.getCategories();
+    	index = 0;
+    	for ( int type : vehTypes )
+   			vehTypeIndexMap.put( type, (index++) );
+    	
+    	tripsByVehTypeByPurpose = new int[modes.length][vehTypeIndexMap.values().size()][tripPurposes.size()];
+    	tripsByVehTypeByPersonType = new int[modes.length][vehTypeIndexMap.values().size()][MAX_PERSON_TYPE+1];
+    	tripsByVehTypeByDistanceBin = new int[modes.length][vehTypeIndexMap.values().size()][distanceBoundaries.length];
 
+		unsatisfiedTripModeCode = Integer.parseInt(propertyMap.get("unsatisfied.trip.mode.code"));
+    	
+		
+        String outputProbCarChangeFileName = propertyMap.get("output.hh.car.change.prob.file");
+		globalLoop = Integer.parseInt(propertyMap.get("global.loop"));
+	    if ( globalLoop > 1 )
+	    	probChagingCarOwnership = getProbabilityOfChangingCarOwnership( outputProbCarChangeFileName,propertyMap.get("hh.id.field"),propertyMap.get("hh.prob.car.change.field")  );
+
+        try {
+			outStreamHh = new PrintWriter( new BufferedWriter( new FileWriter( outputProbCarChangeFileName ) ) );
+		} catch (IOException e) {
+	        System.out.println( "IO Exception writing adjusted trip schedules file: " + outputProbCarChangeFileName );
+	        e.printStackTrace();
+	        System.exit(-1);;
+		}
+        String header3 = "hhid,hidAcrossSample,prevIterationCarChangeProb,probCarOwnershipChange,msaFactor";
+        outStreamHh.println( header3 );
+
+        
+	    addCarFactor = Double.parseDouble(propertyMap.get("add.car.factor"));
+	    subtractCarFactor = Double.parseDouble(propertyMap.get("subtract.car.factor"));
+	    msaFactor = 1.0f/globalLoop;
+
+		periodIntervals = new int[5][2];
+		periodIntervals[0][0] = Integer.valueOf( propertyMap.get( EA_PERIOD_START_KEY ) );
+		periodIntervals[0][1] = Integer.valueOf( propertyMap.get( EA_PERIOD_END_KEY ) );
+		periodIntervals[1][0] = Integer.valueOf( propertyMap.get( AM_PERIOD_START_KEY ) );
+		periodIntervals[1][1] = Integer.valueOf( propertyMap.get( AM_PERIOD_END_KEY ) );
+		periodIntervals[2][0] = Integer.valueOf( propertyMap.get( MD_PERIOD_START_KEY ) );
+		periodIntervals[2][1] = Integer.valueOf( propertyMap.get( MD_PERIOD_END_KEY ) );
+		periodIntervals[3][0] = Integer.valueOf( propertyMap.get( PM_PERIOD_START_KEY ) );
+		periodIntervals[3][1] = Integer.valueOf( propertyMap.get( PM_PERIOD_END_KEY ) );
+		periodIntervals[4][0] = Integer.valueOf( propertyMap.get( EV_PERIOD_START_KEY ) );
+		periodIntervals[4][1] = Integer.valueOf( propertyMap.get( EV_PERIOD_END_KEY ) );
+
+		// number of modes in output tables = autoTripTableNames.length (typically sov,hov2,hov3+,taxi) + empty trips = 4 + 1.
+		String tripTableNamesString = propertyMap.get( AUTO_MODE_TABLE_NAMES_KEY );
+		autoTripTableNames = utility.Parsing.getStringArrayFromCsvString( tripTableNamesString );
+		numModeTables = autoTripTableNames.length;
+		numberOfPeriods = Integer.valueOf( propertyMap.get(NUM_OUTPUT_PERIODS_KEY));
+	    periodLabels = new String[]{ "early", "am", "midday", "pm", "late" };
+
+		String separateCavFilesString = propertyMap.get( SEPARATE_CAV_TRIP_TABLES_KEY );
+		if ( separateCavFilesString != null )
+			separateCavFiles = Boolean.valueOf( separateCavFilesString );
+
+		
+		String[] str =  propertyMap.get( "output.trip.matrix.auto.mode.codes" ).trim().split(",");
+		autoModeCodes = new int[str.length];
+		for(int i=0;i<str.length;i++)
+			autoModeCodes[i]=Integer.parseInt(str[i]);
+				
+		
+//		int numVotSegments = Integer.valueOf( propertyMap.get( "output.number.vot.segments" ) );
+//		if ( numVotSegments > 1 ) {
+//			votThresholds = new int[numVotSegments-1];
+//			for(int i=0;i<numVotSegments-1;i++){
+//				String tempKey = "output.trip.matrices.vot"+String.valueOf(i+1)+".threshold";
+//				votThresholds[i]=Integer.valueOf( propertyMap.get(tempKey) );
+//			}
+//			numberOfVotCategories = numVotSegments;
+//		}
+		
+		if ( separateCavFiles ) {
+			numModeTables =	numModeTables + 1;
+			cavTripTables = new float[numberOfPeriods][numModeTables*numberOfVotCategories][geogManager.getTazValues().length][geogManager.getTazValues().length];
+		}
+		nonCavTripTables = new float[numberOfPeriods][numModeTables*numberOfVotCategories][geogManager.getTazValues().length][geogManager.getTazValues().length];
+				
+		tripTableFiles = new String[numberOfPeriods];
+		tripTableFiles[0] = propertyMap.get("result.path") + propertyMap.get( TRIP_MATRIX_EA_FILE_KEY );
+		tripTableFiles[1] = propertyMap.get("result.path") + propertyMap.get( TRIP_MATRIX_AM_FILE_KEY );
+		tripTableFiles[2] = propertyMap.get("result.path") + propertyMap.get( TRIP_MATRIX_MD_FILE_KEY );
+		tripTableFiles[3] = propertyMap.get("result.path") + propertyMap.get( TRIP_MATRIX_PM_FILE_KEY );
+		tripTableFiles[4] = propertyMap.get("result.path") + propertyMap.get( TRIP_MATRIX_EV_FILE_KEY );
+		
+		String matrixFilesOutputString = propertyMap.get( OUTPUT_TRIP_TABLES_KEY );
+		matrixFilesOutput = Boolean.valueOf( matrixFilesOutputString );
+		String formatString = propertyMap.get( OUTPUT_TRIP_TABLE_FORMAT_KEY );
+		matrixType = MatrixType.lookUpMatrixType( formatString );
+        MatrixDataServer matrixDataServer = new MatrixDataServer();
+        matrixHandler = new MatrixDataLocalHandler(matrixDataServer, matrixType);
+
+        threhsoldRoundUp = Float.parseFloat(propertyMap.get(GlobalProperties.ROUND_UP_THRESHOLD.toString()));
+        tripExpansionFactor = 1.0f/Float.parseFloat(propertyMap.get("global.proportion"));
+        ifExternalStationsIncluded = Boolean.valueOf(propertyMap.get("include.external.stations")); 
+
+
+	    tazValues = geogManager.getTazValues();
+	    tazValuesOrder = IndexSort.indexSort( tazValues );
+	    extNumbers = new int[tazValues.length+1];
+	   	
+	    for ( int i=0; i < tazValues.length; i++ ) {
+	        int k = tazValuesOrder[i];
+	        extNumbers[i+1] = tazValues[k];
+	    }		
+	}
+	
+	
+    public void writeProcessedCarAllocationResults( Logger logger ) {
+
+    	outStreamCar.close();    
+	    outStreamTrip.close();
+	    outStreamHh.close();
+        
+    	
+	    logger.info( "sumAutos=" + sumAutos + ", sumTripSatisfied=" + sumTripSatisfied + ", sumTripNotSatisfied=" + sumTripNotSatisfied );
 	    
-	    float msaFactor = 1.0f/globalLoop;
 	    
+        writePurposeSummaryFile( tripPurposes, vehicleTypePreferences, vehTypeIndexMap, tripsByVehTypeByPurpose, outStreamPurpSummary );
+        writePersTypeSummaryFile( vehicleTypePreferences, vehTypeIndexMap, tripsByVehTypeByPersonType, outStreamPersTypeSummary );
+        writeDistanceSummaryFile( vehicleTypePreferences, vehTypeIndexMap, tripsByVehTypeByDistanceBin, outStreamDistSummary );
+
+        
+	    logger.info(" ");
+	    logger.info(" -------------------- Car Allocation Report ------------------------");
+	    logger.info(" ");
+	    logger.info(String.format( "%-30s","Total Auto Trips Demand = ") + String.format("%,9d",totalDemand));
+	    logger.info(String.format( "%-30s","Total Auto Unmet Demand = ") + String.format("%,9d",totalDemand - totalLoadedTripsAV - totalAutoNonAVTrips));
+	    logger.info(String.format( "%-30s","Total Auto Trips = ") + String.format("%,9d",totalAutoTrips));
+	    logger.info(String.format( "%-30s","Total Auto Non-AV Trips = " )+ String.format("%,9d",totalAutoNonAVTrips));
+	    logger.info(String.format( "%-30s","Total Auto AV Trips = ") + String.format("%,9d",totalAutoAVTrips));
+	    logger.info(String.format( "%-30s","Total Loaded AV Trips = ") + String.format("%,9d",totalLoadedTripsAV));
+	    logger.info(String.format( "%-30s","Total Empty AV Trips = ") + String.format("%,9d",totalEmptyTripsAV));
+	    logger.info(String.format( "%-30s","Total VMT = ") + String.format("%,.1f",totalVMT));
+	    logger.info(String.format( "%-30s","Total AV VMT = ") + String.format("%,.1f",totalAVVMT));
+	    logger.info(String.format( "%-30s","Total Loaded AV VMT = ") + String.format("%,.1f",loadedAVVMT));
+	    logger.info(String.format( "%-30s","Total Empty AV VMT = ") + String.format("%,.1f",emptyAVVMT));
+	    logger.info(String.format( "%-30s","Total Non-singular cases = ") + String.format("%,9d", totalNonSingularCases));
+	    logger.info(" ");
+	    logger.info(" -------------------- Schedule Adjustment Report ------------------------");
+	    logger.info(" ");
+	    logger.info(String.format( "%-30s","Total Extra Wait Time = ") + String.format("%,.1f",totalExtraWaitTime));
+	    logger.info(String.format( "%-30s","Total Early Departure Time = ") + String.format("%,.1f",totalEarlyDepTime));
+	    logger.info(" ");
+	    logger.info(" -------------------- Car Use Report for HHs with Auto Trips ------------------------");
+	    logger.info(" ");
+	    logger.info(String.format( "%-60s","Total Number of Cars = ") + String.format("%,15d",totalCars));
+	    logger.info(String.format( "%-60s","Total Non-AV Cars = ") + String.format("%,15d",totalNonAVCars));
+	    logger.info(String.format( "%-60s","Total AV Cars = ") + String.format("%,15d",totalAVCars));
+	    logger.info(String.format( "%-60s","Total Used Cars = ") + String.format("%,15d",totalUsedCars));
+	    logger.info(String.format( "%-60s","Total Unused Cars (Car insufficient, car < hhsize) = ") + String.format("%,15d",totalUnusedCars[0]));
+	    logger.info(String.format( "%-60s","Total Unused Cars (Car sufficient, car = hhsize) = ") + String.format("%,15d",totalUnusedCars[1]));
+	    logger.info(String.format( "%-60s","Total Unused Cars (Car oversufficient, car > hhsize) = ") + String.format("%,15d",totalUnusedCars[2]));
+	    logger.info(String.format( "%-60s","Total Unused Non-AV Cars = ") + String.format("%,15d",totalUsedNonAVCars));
+	    logger.info(String.format( "%-60s","Total Unused AV Cars = ") + String.format("%,15d",totalUsedAVCars));
+
+
+	    if ( matrixFilesOutput ) {
+	    	
+			logger.info( "writing trip matrix files." );
+	
+		    int offset = 0;
+		    if ( separateCavFiles )
+		    	offset = numModeTables;
+		    
+		    for ( int i=0; i < periodLabels.length; i++ ) {
+	
+				Matrix[] matrices = new Matrix[numModeTables];
+				String[] tripTableNames = new String[numModeTables];
+				if ( separateCavFiles ) {
+					matrices = new Matrix[numModeTables*2];
+					tripTableNames = new String[numModeTables*2];
+				}
+				
+				if ( separateCavFiles ) {
+					
+	    			for ( int j=0; j < numModeTables-1; j++ ) {
+	  					String description = periodLabels[i] + " period C/AV " + autoTripTableNames[j] + " trips";
+	  					float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, cavTripTables[i][j], tazValues );
+						tripTableNames[j] = autoTripTableNames[j]+"_cav";
+	  					matrices[j] = new Matrix( tripTableNames[j], description, orderedTable );
+	  					matrices[j].setExternalNumbers( extNumbers );
+	    			}
+	    
+	  				String description = periodLabels[i] + " period C/AV empty trips";
+	  				float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, cavTripTables[i][(numModeTables-1)], tazValues );
+					tripTableNames[(numModeTables-1)] = "empty_cav";
+	  				matrices[(numModeTables-1)] = new Matrix( tripTableNames[(numModeTables-1)], description, orderedTable );
+	  				matrices[(numModeTables-1)].setExternalNumbers( extNumbers );
+	  				
+	    			for ( int j=0; j < numModeTables-1; j++ ) {
+	  					description = periodLabels[i] + " period non-C/AV " + autoTripTableNames[j] + " trips";
+	  					orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][j], tazValues );
+						tripTableNames[j+offset] = autoTripTableNames[j];
+	  					matrices[j+offset] = new Matrix( tripTableNames[j+offset], description, orderedTable );
+	  					matrices[j+offset].setExternalNumbers( extNumbers );
+	    			}
+	    
+	  				description = periodLabels[i] + " period non-C/AV empty trips";
+	  				orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][(numModeTables-1)], tazValues );
+	  				tripTableNames[(numModeTables-1)+offset] = "empty";
+	  				matrices[(numModeTables-1)+offset] = new Matrix( tripTableNames[(numModeTables-1)+offset], description, orderedTable );
+	  				matrices[(numModeTables-1)+offset].setExternalNumbers( extNumbers );
+	
+				}
+				else {
+					
+	    			for ( int j=0; j < numModeTables; j++ ) {
+	  					String description = periodLabels[i] + " period " + autoTripTableNames[j] + " trips";
+	  					float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][j], tazValues );
+						tripTableNames[j] = autoTripTableNames[j];
+	  					matrices[j] = new Matrix( tripTableNames[j], description, orderedTable );
+	  					matrices[j].setExternalNumbers( extNumbers );
+	    			}
+	    
+				}
+	  				
+	  			
+	  			logger.info( "writing file: " + tripTableFiles[i] + ", matrixType: " + matrixType );
+	  			for ( String table : tripTableNames )
+	  	  			logger.info( "        " + table );
+	
+	  			matrixHandler.writeMatrixFile( tripTableFiles[i], matrices, tripTableNames, matrixType );
+
+		    }
+		    
+	    }
+	
+	}
+
+    
+    public void processPartitionResults ( Logger logger, List<HouseholdCarAllocation> hhCarAllocationResultsList ) {
+
+        int[] tazIndices = geogManager.getTazIndices();
+    	
 	    for ( HouseholdCarAllocation depArrObj : hhCarAllocationResultsList ) {
 	        
 	        Household hh = depArrObj.getHousehold();
@@ -273,6 +432,7 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	        List<AutoTrip> aTrips = hh.getAutoTrips();
 	        int numAuto = hh.getNumAutos();
 	        
+		    int carSufficiencyLevel = -1;
 	        if(numAuto > 0 && numAuto < hh.getPersons().length )
 	        	carSufficiencyLevel = 0;
 	        else if(numAuto > 0 && numAuto == hh.getPersons().length   )
@@ -290,8 +450,8 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	    	float[] distanceFromHome = sharedDistanceObject.getOffpeakDistanceFromTaz(homeTaz);
 	    	float[] distanceToHome = sharedDistanceObject.getOffpeakDistanceToTaz(homeTaz);
 	    	
-	    	double[] parkingRateHr = socec.getDoubleFieldByMazValue(propertyMap.get(GlobalProperties.PARKING_HOURLY_FIELD.toString()));
-	    	double[] parkingRateMonth = socec.getDoubleFieldByMazValue(propertyMap.get(GlobalProperties.PARKING_MONTHLY_FIELD.toString()));
+	    	//double[] parkingRateHr = socec.getDoubleFieldByMazValue(propertyMap.get(GlobalProperties.PARKING_HOURLY_FIELD.toString()));
+	    	//double[] parkingRateMonth = socec.getDoubleFieldByMazValue(propertyMap.get(GlobalProperties.PARKING_MONTHLY_FIELD.toString()));
 	    	
 	        
 	        int hhNumUnsatisfiedDemand = 0;
@@ -306,7 +466,6 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	           
 	            //Assign auto ID for each auto trip
 	            if((mode == AbmObjectTranslater.SOV_MODE || mode == AbmObjectTranslater.HOV2_DR_MODE || mode == AbmObjectTranslater.HOV3_DR_MODE) ){
-	            	double maxAllocation = 0;
 	            	unsatisRes = unsatisDemandResults[trip.getHhAutoTripId()];
 	            	double[] carAllocationForTrip = carAllocationResults[CarAllocation.INDEX_CarAllo][trip.getHhAutoTripId()];                	
 	            	for( int a = 0; a < numAuto; a ++){
@@ -327,8 +486,8 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	            float depEarly = (float)depArrResults[CarAllocation.DEP_EARLY][trip.getPnum()][trip.getIndivTripId()];
 	            float depLate = (float)depArrResults[CarAllocation.DEP_LATE][trip.getPnum()][trip.getIndivTripId()];
 	            
-	            totalExtraWaitTime +=depLate;
-	            totalEarlyDepTime +=depEarly;
+	            totalExtraWaitTime += depLate;
+	            totalEarlyDepTime += depEarly;
 	            if(unsatisRes>=0 && unsatisRes <=0.1 && autoId == -1){
 	            	totalNonSingularCases++;
 	            	singular = 1;
@@ -360,13 +519,13 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
             		xij[0]+","+xij[1]+","+xij[2]+","+xij[3] + ","+ unsatisRes + ","+ singular + ","+ depArrObj.getNumIterationsForIntegerizing();
 	                    
 	            outStreamTrip.println( record );     
-	            int period = getTripTablePeriod(CommonProcedures.convertMinutesToInterval(trip.getSchedDepart()+depLate-depEarly, constants), periodIntervals);
-  	          //float vot = trip.getValueOfTime();
-              //int votCat = getVotCategoryIndex( float vot );
-	
+				//int period = getTripTablePeriod(CommonProcedures.convertMinutesToInterval(trip.getSchedDepart()+depLate-depEarly, constants), periodIntervals);
+				//float vot = trip.getValueOfTime();
+				//int votCat = getVotCategoryIndex( float vot );
+				//
 				//if(mode == Integer.parseInt(propertyMap.get("taxi.mode.code"))){
-	      //    if(!ifExternalStationsIncluded ||(!ArrayUtils.contains(geogManager.getExternalStations(),geogManager.getMazTazValue(trip.getDestMaz())) && !ArrayUtils.contains(geogManager.getExternalStations(),geogManager.getMazTazValue(hh.getHomeMaz()))))
-	    	//        autoTripTables[getTripTablePeriod(period)][4-1][tazIndices[geogManager.getMazTazValue(trip.getDestMaz())]][tazIndices[geogManager.getMazTazValue(hh.getHomeMaz())]] += tripExpansionFactor;
+				//    if(!ifExternalStationsIncluded ||(!ArrayUtils.contains(geogManager.getExternalStations(),geogManager.getMazTazValue(trip.getDestMaz())) && !ArrayUtils.contains(geogManager.getExternalStations(),geogManager.getMazTazValue(hh.getHomeMaz()))))
+				//        autoTripTables[getTripTablePeriod(period)][4-1][tazIndices[geogManager.getMazTazValue(trip.getDestMaz())]][tazIndices[geogManager.getMazTazValue(hh.getHomeMaz())]] += tripExpansionFactor;
 				//}	            
 	        
 	            if ( tripVehTypeCategory > 0 ) {
@@ -928,7 +1087,7 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	    					geogManager.getMazTazValue(trip.getOrigMaz())+","+
 	    					geogManager.getMazTazValue(trip.getDestMaz())+","+
         					tripMode+","+
-        					taxiModeCode+","+
+        					unsatisfiedTripModeCode+","+
 	    					carRepoType  + ","+
 	    					origHome+","+
 	    					destHome  + ","+
@@ -1004,126 +1163,10 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	                
 	    
 	    }
-	    
-	    logger.info( "sumAutos=" + sumAutos + ", sumTripSatisfied=" + sumTripSatisfied + ", sumTripNotSatisfied=" + sumTripNotSatisfied );
-	    
-	    outStreamCar.close();    
-	    outStreamTrip.close();
-	    outStreamHh.close();
+    	
+    }
 
-	    
-        writePurposeSummaryFile(tripPurposes, vehicleTypePreferences, vehTypeIndexMap, tripsByVehTypeByPurpose, outStreamPurpSummary );
-        writePersTypeSummaryFile( vehicleTypePreferences, vehTypeIndexMap, tripsByVehTypeByPersonType, outStreamPersTypeSummary );
-        writeDistanceSummaryFile( vehicleTypePreferences, vehTypeIndexMap, tripsByVehTypeByDistanceBin, outStreamDistSummary );
-
-        
-	    logger.info(" ");
-	    logger.info(" -------------------- Car Allocation Report ------------------------");
-	    logger.info(" ");
-	    logger.info(String.format( "%-30s","Total Auto Trips Demand = ") + String.format("%,9d",totalDemand));
-	    logger.info(String.format( "%-30s","Total Auto Unmet Demand = ") + String.format("%,9d",totalDemand - totalLoadedTripsAV - totalAutoNonAVTrips));
-	    logger.info(String.format( "%-30s","Total Auto Trips = ") + String.format("%,9d",totalAutoTrips));
-	    logger.info(String.format( "%-30s","Total Auto Non-AV Trips = " )+ String.format("%,9d",totalAutoNonAVTrips));
-	    logger.info(String.format( "%-30s","Total Auto AV Trips = ") + String.format("%,9d",totalAutoAVTrips));
-	    logger.info(String.format( "%-30s","Total Loaded AV Trips = ") + String.format("%,9d",totalLoadedTripsAV));
-	    logger.info(String.format( "%-30s","Total Empty AV Trips = ") + String.format("%,9d",totalEmptyTripsAV));
-	    logger.info(String.format( "%-30s","Total VMT = ") + String.format("%,.1f",totalVMT));
-	    logger.info(String.format( "%-30s","Total AV VMT = ") + String.format("%,.1f",totalAVVMT));
-	    logger.info(String.format( "%-30s","Total Loaded AV VMT = ") + String.format("%,.1f",loadedAVVMT));
-	    logger.info(String.format( "%-30s","Total Empty AV VMT = ") + String.format("%,.1f",emptyAVVMT));
-	    logger.info(String.format( "%-30s","Total Non-singular cases = ") + String.format("%,9d", totalNonSingularCases));
-	    logger.info(" ");
-	    logger.info(" -------------------- Schedule Adjustment Report ------------------------");
-	    logger.info(" ");
-	    logger.info(String.format( "%-30s","Total Extra Wait Time = ") + String.format("%,.1f",totalExtraWaitTime));
-	    logger.info(String.format( "%-30s","Total Early Departure Time = ") + String.format("%,.1f",totalEarlyDepTime));
-	    logger.info(" ");
-	    logger.info(" -------------------- Car Use Report for HHs with Auto Trips ------------------------");
-	    logger.info(" ");
-	    logger.info(String.format( "%-60s","Total Number of Cars = ") + String.format("%,15d",totalCars));
-	    logger.info(String.format( "%-60s","Total Non-AV Cars = ") + String.format("%,15d",totalNonAVCars));
-	    logger.info(String.format( "%-60s","Total AV Cars = ") + String.format("%,15d",totalAVCars));
-	    logger.info(String.format( "%-60s","Total Used Cars = ") + String.format("%,15d",totalUsedCars));
-	    logger.info(String.format( "%-60s","Total Unused Cars (Car insufficient, car < hhsize) = ") + String.format("%,15d",totalUnusedCars[0]));
-	    logger.info(String.format( "%-60s","Total Unused Cars (Car sufficient, car = hhsize) = ") + String.format("%,15d",totalUnusedCars[1]));
-	    logger.info(String.format( "%-60s","Total Unused Cars (Car oversufficient, car > hhsize) = ") + String.format("%,15d",totalUnusedCars[2]));
-	    logger.info(String.format( "%-60s","Total Unused Non-AV Cars = ") + String.format("%,15d",totalUsedNonAVCars));
-	    logger.info(String.format( "%-60s","Total Unused AV Cars = ") + String.format("%,15d",totalUsedAVCars));
-
-
-	    if ( matrixFilesOutput ) {
-	    	
-			logger.info( "writing trip matrix files." );
-	
-		    int offset = 0;
-		    if ( separateCavFiles )
-		    	offset = numModeTables;
-		    
-		    for ( int i=0; i < periodLabels.length; i++ ) {
-	
-				Matrix[] matrices = new Matrix[numModeTables];
-				String[] tripTableNames = new String[numModeTables];
-				if ( separateCavFiles ) {
-					matrices = new Matrix[numModeTables*2];
-					tripTableNames = new String[numModeTables*2];
-				}
-				
-				if ( separateCavFiles ) {
-					
-	    			for ( int j=0; j < numModeTables-1; j++ ) {
-	  					String description = periodLabels[i] + " period C/AV " + autoTripTableNames[j] + " trips";
-	  					float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, cavTripTables[i][j], tazValues );
-						tripTableNames[j] = autoTripTableNames[j]+"_cav";
-	  					matrices[j] = new Matrix( tripTableNames[j], description, orderedTable );
-	  					matrices[j].setExternalNumbers( extNumbers );
-	    			}
-	    
-	  				String description = periodLabels[i] + " period C/AV empty trips";
-	  				float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, cavTripTables[i][(numModeTables-1)], tazValues );
-					tripTableNames[(numModeTables-1)] = "empty_cav";
-	  				matrices[(numModeTables-1)] = new Matrix( tripTableNames[(numModeTables-1)], description, orderedTable );
-	  				matrices[(numModeTables-1)].setExternalNumbers( extNumbers );
-	  				
-	    			for ( int j=0; j < numModeTables-1; j++ ) {
-	  					description = periodLabels[i] + " period non-C/AV " + autoTripTableNames[j] + " trips";
-	  					orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][j], tazValues );
-						tripTableNames[j+offset] = autoTripTableNames[j];
-	  					matrices[j+offset] = new Matrix( tripTableNames[j+offset], description, orderedTable );
-	  					matrices[j+offset].setExternalNumbers( extNumbers );
-	    			}
-	    
-	  				description = periodLabels[i] + " period non-C/AV empty trips";
-	  				orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][(numModeTables-1)], tazValues );
-	  				tripTableNames[(numModeTables-1)+offset] = "empty";
-	  				matrices[(numModeTables-1)+offset] = new Matrix( tripTableNames[(numModeTables-1)+offset], description, orderedTable );
-	  				matrices[(numModeTables-1)+offset].setExternalNumbers( extNumbers );
-	
-				}
-				else {
-					
-	    			for ( int j=0; j < numModeTables; j++ ) {
-	  					String description = periodLabels[i] + " period " + autoTripTableNames[j] + " trips";
-	  					float[][] orderedTable = getTripTableOrderedByExternalTazValues( tazValuesOrder, nonCavTripTables[i][j], tazValues );
-						tripTableNames[j] = autoTripTableNames[j];
-	  					matrices[j] = new Matrix( tripTableNames[j], description, orderedTable );
-	  					matrices[j].setExternalNumbers( extNumbers );
-	    			}
-	    
-				}
-	  				
-	  			
-	  			logger.info( "writing file: " + tripTableFiles[i] + ", matrixType: " + matrixType );
-	  			for ( String table : tripTableNames )
-	  	  			logger.info( "        " + table );
-	
-	  			matrixHandler.writeMatrixFile( tripTableFiles[i], matrices, tripTableNames, matrixType );
-
-		    }
-		    
-	    }
-	
-	}
-
+    
 	private void writePurposeSummaryFile(List<Integer> tripPurposes, VehicleTypePreferences vehicleTypePreferences, Map<Integer, Integer> vehTypeIndexMap, int[][][] tripsByVehTypeByPurpose, PrintWriter outStreamPurpSummary) {
 		if ( outStreamPurpSummary != null ) {
         	
@@ -1242,6 +1285,14 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 		while ( distanceBoundaries[bin] <= distance )
 			bin++;
 		return bin;
+	}
+
+	@Override
+	public void writeCarAllocationOutputFile(Logger logger, HashMap<String, String> propertyMap, String outputTripListFilename, String outputDisaggregateCarUseFileName, String outputProbCarChangeFileName,
+					String outputVehTypePurposeSummaryFileName, String outputVehTypePersTypeSummaryFileName, String outputVehTypeDistanceSummaryFileName, List<HouseholdCarAllocation> hhCarAllocationResultsList,
+					GeographyManager geogManager, SharedDistanceMatrixData sharedDistanceObject, SocioEconomicDataManager socec, ConstantsIf constants, VehicleTypePreferences vehicleTypePreferences) {
+		// TODO Auto-generated method stub
+		
 	}
 }
 

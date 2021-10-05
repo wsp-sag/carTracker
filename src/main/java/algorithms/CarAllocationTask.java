@@ -53,6 +53,9 @@ public class CarAllocationTask extends AbstractTask<Object> implements Distribut
 
     public void run() {
     	
+		long start = System.currentTimeMillis();
+		long start1 = System.currentTimeMillis();
+    	
     	Logger logger = Logger.getLogger(CarAllocationTask.class);    	
 		taskName = "NULL";
         try {
@@ -76,11 +79,16 @@ public class CarAllocationTask extends AbstractTask<Object> implements Distribut
 		vehicleTypePreferences = (VehicleTypePreferences)dataProvider.getParameter( "vehicleTypePreferences" );
         CarAllocation carAllocation = new CarAllocation( parameterInstance,propertyMap, socec,geogManager,vehicleTypePreferences );
         
+		int secs1 = (int)((System.currentTimeMillis() - start1)/1000.0);
+		start1 = System.currentTimeMillis();
+		
     	// get the hh info and log the report for the debugHhId
-        AbmDataStore abmDataStore = new AbmDataStore( propertyMap );
+        AbmDataStore abmDataStore = dataProvider.getParameter( "abmDataStore" );
         abmDataStore.populateDataStore( startRange, endRange+1 );
        	        
-
+		int secs2 = (int)((System.currentTimeMillis() - start1)/1000.0);
+		start1 = System.currentTimeMillis();
+		
         Map<Integer, Float> plannedDepartTimesMap = null;
         Map<Integer, Float> experiencedTravelTimesMap = null;
         Map<Long, Double> minActDurMap = null;
@@ -98,19 +106,30 @@ public class CarAllocationTask extends AbstractTask<Object> implements Distribut
     		      .map( carAllocator::getCarAllocationWithSchedulesForHh )
       		  .collect( Collectors.toList() );
   		 
-
-    	
+		int secs3 = (int)((System.currentTimeMillis() - start1)/1000.0);
+		start1 = System.currentTimeMillis();
+		
+		int numItersIntegrizing = 0;
+		int numItersOptimalSolution = 0;
+		for ( HouseholdCarAllocation temp : hhCarAllocationResults ) {
+			numItersIntegrizing += temp.getNumIterationsForIntegerizing();
+			numItersOptimalSolution += temp.getOptimalSolutionIterations();
+		}
     		 
         
         // create a result Object to hold the number of failures and the list of vehRecords.
         List<Object> resultObject = new ArrayList<Object>(1);
         resultObject.add( hhCarAllocationResults );
 
+		int seconds = (int)((System.currentTimeMillis() - start)/1000.0);
         
 		// add the taskname and the result Object to the resultBundle for this task
-        List<Object> resultBundle = new ArrayList<Object>(2);
+        List<Object> resultBundle = new ArrayList<Object>(5);
         resultBundle.add( taskName );
         resultBundle.add( resultObject );
+        resultBundle.add( Arrays.asList( secs1, secs2, secs3, seconds ) );
+        resultBundle.add( numItersIntegrizing );
+        resultBundle.add( numItersOptimalSolution );
         setResult( resultBundle );
 		
     }

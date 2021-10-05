@@ -38,6 +38,7 @@ public class HhCarAllocator implements HhCarAllocatorIf, Serializable {
 	boolean runMixedIntergerLP = false;
 	private static String solverType = "CLP_LINEAR_PROGRAMMING";
 	private Boolean logProgress;
+
 	public HhCarAllocator( HashMap<String,String> propertyMap,CarAllocation allocator, AbmDataStore dataStore, Map<Integer, Float> experiencedVehicleTravelTimesMap , Logger logger) {
 		this.allocator = allocator;
 		this.logger = logger;
@@ -50,6 +51,9 @@ public class HhCarAllocator implements HhCarAllocatorIf, Serializable {
 	@Override
 	public HouseholdCarAllocation getCarAllocationWithSchedulesForHh( Household hh ) {
 
+		//if ( hh.getPersons().length != 2 )
+		//	return null;
+		
 		MPSolver solver = null;
 		
 		int iterNum = 0;
@@ -120,6 +124,7 @@ public class HhCarAllocator implements HhCarAllocatorIf, Serializable {
 	        		int carId2 = -1; 
     	        	for( int jj=0; jj < carAllocationResults[CarAllocation.INDEX_CarAllo][i].length; jj++) {
     	        		if (carAllocationResults[CarAllocation.INDEX_CarAllo][i][jj] > WriteCarAllocationOutputFilesMag.threhsoldRoundUp) {
+       	        		//if (carAllocationResults[CarAllocation.INDEX_CarAllo][i][jj] > 0.49) {
         	        		sumCarTripAllocation ++;
         	        		if ( carId2 < 0 )
         	        			carId2 = jj;

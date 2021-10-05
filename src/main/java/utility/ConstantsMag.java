@@ -9,6 +9,7 @@ public class ConstantsMag implements ConstantsIf {
     private static final int NUM_TOD_INTERVALS = 40; 
     private static final int DEFALUT_LAST_DEPART_MINUTE = 1430;
     
+    
     public int getTodIntervalMinutes() {
         return TOD_INTERVAL_IN_MINUTES;
     }

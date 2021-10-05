@@ -50,6 +50,10 @@ public interface WriteCarAllocationOutputFilesIf {
 
 
 
+	public void processPartitionResults ( Logger logger, List<HouseholdCarAllocation> hhCarAllocationResultsList );
+	
+	public void writeProcessedCarAllocationResults( Logger logger );
+	
 	public void writeCarAllocationOutputFile( Logger logger, HashMap<String, String> propertyMap, 
 			    	String outputTripListFilename, String outputDisaggregateCarUseFileName, String outputProbCarChangeFileName,
 			    	String outputVehTypePurposeSummaryFileName, String outputVehTypePersTypeSummaryFileName, String outputVehTypeDistanceSummaryFileName,

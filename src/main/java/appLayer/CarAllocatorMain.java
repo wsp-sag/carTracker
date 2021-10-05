@@ -5,7 +5,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.MissingResourceException;
 import java.util.ResourceBundle;
 import java.util.stream.Collectors;
 
@@ -15,6 +14,7 @@ import org.jppf.client.JPPFClient;
 import org.jppf.node.protocol.DataProvider;
 import org.jppf.node.protocol.MemoryMapDataProvider;
 
+//import com.google.ortools.Loader;
 import com.pb.common.util.ResourceUtil;
 
 import accessibility.GeographyManager;
@@ -39,6 +39,7 @@ import utility.ParallelHelper;
 public class CarAllocatorMain {
 
     private static boolean runDistributed = false;
+	public static boolean ortoolsLibLoaded = false;
 	
 	
     public Map<Long, double[]> runCarAllocator( ResourceBundle rb, Logger logger, GeographyManager geogManager, SocioEconomicDataManager socec ) {
@@ -48,21 +49,6 @@ public class CarAllocatorMain {
 
         HashMap<String, String> propertyMap = ResourceUtil.changeResourceBundleIntoHashMap(rb);
         String parametersFile = propertyMap.get( GlobalProperties.PARAMETER_FILE_KEY.toString() );       
-
-        int debugHhId = -1;
-        try {
-            debugHhId = Integer.valueOf( propertyMap.get( GlobalProperties.HHID_LOG_REPORT_KEY.toString() ) );
-        }
-        catch( MissingResourceException e ) {         
-        }
-        
-        
-        
-        int startOfDayMinute = 0; 
-        debugHhId = -1;
-        // get distance matrix
-      
-        List<HouseholdCarAllocation> carAllocationResults = null;
         ParameterReader parameterInstance = ParameterReader.getInstance();
         parameterInstance.readParameters(parametersFile);
         
@@ -70,14 +56,6 @@ public class CarAllocatorMain {
     	VehicleTypePreferences vehicleTypePreferences = new VehicleTypePreferences();
     	vehicleTypePreferences.readPreferences( filename );
     	        
-        if(runDistributed)
-        	carAllocationResults = runCarAllocation_v2_distributed( propertyMap, logger, parameterInstance, geogManager, socec, vehicleTypePreferences);
-        else        	
-        	carAllocationResults= runCarAllocation_v2_mono(propertyMap, logger, parameterInstance, geogManager, socec, vehicleTypePreferences);
-        
-        //if ( debugHhId >= 0 )
-        //    debugCarAllocation_v2( propertyMap, logger, parametersFile, debugHhId, startOfDayMinute );       
-        
         // get the region property.  this is set for Ohio3C and not set for MAG.
         // Use it to distinguish which implementation to use.
         ConstantsIf constants = null;
@@ -85,73 +63,41 @@ public class CarAllocatorMain {
         String mpoRegion = propertyMap.get( WriteCarAllocationOutputFilesIf.MODEL_REGION_PROPERTY );
         if ( mpoRegion == null ) {
 	        constants = new ConstantsMag();
-	        writer = new WriteCarAllocationOutputFilesMag();
+	        SharedDistanceMatrixData sharedDistanceObject = SharedDistanceMatrixData.getInstance(propertyMap, geogManager);
+	        writer = new WriteCarAllocationOutputFilesMag( propertyMap, geogManager, sharedDistanceObject, socec, constants, vehicleTypePreferences );
         }
         else {
         	constants = new ConstantsOhio();
         	writer = new WriteCarAllocationOutputFilesOhio(); 
         }
+
+	    logger.info( "reading ABM data files ..." );
+	    AbmDataStore abmDataStore = new AbmDataStore( propertyMap );
+
+	    int minHhId = Integer.valueOf( propertyMap.get( GlobalProperties.MIN_ABM_HH_ID_KEY.toString() ) );
+		int maxHhId = Integer.valueOf( propertyMap.get( GlobalProperties.MAX_ABM_HH_ID_KEY.toString() ) );
+		minHhId = minHhId >= 0 ? minHhId : abmDataStore.getMinHhId();
+		maxHhId = maxHhId >= 0 ? maxHhId : abmDataStore.getMaxHhId();		
         
-        SharedDistanceMatrixData sharedDistanceObject = SharedDistanceMatrixData.getInstance(propertyMap, geogManager);
-        String outputProbCarChangeFileName = propertyMap.get("output.hh.car.change.prob.file")+"_"+propertyMap.get("scenario.suffix.name")+".csv";
-        String outputVehTypePurposeSummaryFileName = propertyMap.get("output.vehicle.type.purpose.summary.file");
-        String outputVehTypePersTypeSummaryFileName = propertyMap.get("output.vehicle.type.perstype.summary.file");
-        String outputVehTypeDistanceSummaryFileName = propertyMap.get("output.vehicle.type.distance.summary.file");
-        writer.writeCarAllocationOutputFile(logger, propertyMap, 
-        	propertyMap.get("output.trip.file")+"_"+propertyMap.get("scenario.suffix.name")+".csv",
-        	propertyMap.get("output.car.use.file")+"_"+propertyMap.get("scenario.suffix.name")+".csv",
-        	outputProbCarChangeFileName, outputVehTypePurposeSummaryFileName, outputVehTypePersTypeSummaryFileName, outputVehTypeDistanceSummaryFileName,
-        	carAllocationResults, geogManager, sharedDistanceObject, socec, constants, vehicleTypePreferences);
+	    logger.info( "finished reading ABM data files ..." );
+	    
+        if(runDistributed)
+        	runCarAllocation_v2_distributed( propertyMap, logger, parameterInstance, abmDataStore, minHhId, maxHhId, geogManager, socec, vehicleTypePreferences, writer);
+        else        	
+        	runCarAllocation_v2_mono(propertyMap, logger, parameterInstance, abmDataStore, minHhId, maxHhId, geogManager, socec, vehicleTypePreferences, writer);
+        
+        writer.writeProcessedCarAllocationResults( logger );
                 
         return null;
     }   
     
 
-
 	
+	private void runCarAllocation_v2_distributed( Map<String, String> propertyMap, Logger logger, ParameterReader parameterInstance,
+			AbmDataStore abmDataStore, int minHhId, int maxHhId, GeographyManager geogManager, SocioEconomicDataManager socec,
+			VehicleTypePreferences vehicleTypePreferences, WriteCarAllocationOutputFilesIf writer ) {
+					    
 
-	
-	private List<HouseholdCarAllocation> runCarAllocation_v2_distributed( Map<String, String> propertyMap, 
-			Logger logger, ParameterReader parameterInstance, GeographyManager geogManager, SocioEconomicDataManager socec, VehicleTypePreferences vehicleTypePreferences ) {
-				
-//        JPPFNodeForwardingMBean forwarder = null;
-//        NodeSelector masterSelector = null;
-        JPPFClient myClient =  new JPPFClient();        
-//        if ( ! myClient.isLocalExecutionEnabled() ) {
-//            
-//            try {
-//                JPPFConnectionPool connectionPool = myClient.awaitActiveConnectionPool();
-//                // wait until at least one JMX connection wrapper is established
-//                JMXDriverConnectionWrapper jmx = connectionPool.awaitJMXConnections(Operator.AT_LEAST, 1, true).get(0);
-//                forwarder = jmx.getNodeForwarder();
-//            
-//                // create a node selector that only selects master nodes
-//                ExecutionPolicy masterPolicy = new Equal("jppf.node.provisioning.master", true);
-//                masterSelector = new ExecutionPolicySelector(masterPolicy);
-//
-//                TypedProperties slaveConfig = new TypedProperties()
-//                                // request 1 processing threads
-//                                .setInt( "jppf.processing.threads", 1 )
-//                                // specify a server JVM with 48 GB of heap
-//                                .setString( "jppf.jvm.options", "-server -Xmx8g -Djava.library.path=c:/jim/projects/mag/isam/lib/ortools" );
-//                				//.setString( "jppf.jvm.options", "-server -Xmx32g" );
-//                forwarder.provisionSlaveNodes(masterSelector, 4, slaveConfig);
-//            }
-//            catch (Exception e) {
-//                // TODO Auto-generated catch block
-//                e.printStackTrace();
-//            }
-//            
-//        }
-	    
-
-		int minHhId = Integer.valueOf( propertyMap.get( GlobalProperties.MIN_ABM_HH_ID_KEY.toString() ) );
-		int maxHhId = Integer.valueOf( propertyMap.get( GlobalProperties.MAX_ABM_HH_ID_KEY.toString() ) );
-        AbmDataStore abmDataStore = new AbmDataStore( propertyMap );
-		minHhId = minHhId >= 0 ? minHhId : abmDataStore.getMinHhId();
-		maxHhId = maxHhId >= 0 ? maxHhId : abmDataStore.getMaxHhId();
-		
-        
 		int numHhsPerJob = Integer.valueOf( propertyMap.get( GlobalProperties.NUM_HHS_PER_JOB.toString() ) );
 		int numHhPartitions = Integer.valueOf( propertyMap.get( GlobalProperties.NUM_HH_PARTITIONS.toString() ) );
 		int numHhsPerPartition = (maxHhId - minHhId)/numHhPartitions;
@@ -163,9 +109,11 @@ public class CarAllocatorMain {
         dataProvider.setParameter( "geographyManager", geogManager );
         dataProvider.setParameter( "socioEconomicDataManager", socec );
         dataProvider.setParameter( "vehicleTypePreferences", vehicleTypePreferences );
+        dataProvider.setParameter( "abmDataStore", abmDataStore );
         
+        JPPFClient myClient =  new JPPFClient();        
+
         
-  		List<HouseholdCarAllocation> hhAllocationResultsList = new ArrayList<>();
         List<List<HouseholdCarAllocation>> lpFailedList = new ArrayList<>();
        	for ( int i=0; i < HhCarAllocator.MAX_ITERATIONS; i++ )
        		lpFailedList.add( new ArrayList<>() );
@@ -177,17 +125,19 @@ public class CarAllocatorMain {
        	for ( int p=0; p < numHhPartitions; p++ ) {
 
     		long start = System.currentTimeMillis();
-       		
+
     		logger.info( "running Car allocation for partition " + (p+1) + " of " + numHhPartitions + ", hhids: [" + startHh + "," + endHh + "] ..." );
        		
 	        List<Object> resultList = ParallelHelper.PARALLEL_HELPER_DISTRIBUTER.solveDistributed( CarAllocationTask.MODEL_LABEL, new CarAllocationTask(0,0), myClient, dataProvider, startHh, endHh, numHhsPerJob );
-	       	for ( Object result : (List<Object>)resultList ) {
+    		logger.info( "recieved task resultList." );
+
+    		for ( Object result : (List<Object>)resultList ) {
 	       		
 	       		List<Object> taskResultList = (List<Object>)result;       		
 	       		List<HouseholdCarAllocation> taskResultsList = (List<HouseholdCarAllocation>)taskResultList.get(0);
 	       		
-	       		hhAllocationResultsList.addAll( taskResultsList );
-	       		
+	    	    writer.processPartitionResults ( logger, taskResultsList );
+
 	       		for ( HouseholdCarAllocation hhAdj : taskResultsList )
 	     			if ( hhAdj.getOptimalSolutionIterations() > 0 )
 	     				lpFailedList.get( hhAdj.getOptimalSolutionIterations()-1 ).add( hhAdj );
@@ -201,7 +151,7 @@ public class CarAllocatorMain {
 	   			break;
 
 	   		endHh += numHhsPerPartition;
-	   		if ( endHh > maxHhId )
+	   		if ( (endHh > maxHhId) || (p == (numHhPartitions-2)) )
 	   			endHh = maxHhId;
 
        	}
@@ -210,47 +160,31 @@ public class CarAllocatorMain {
        	for ( int i=0; i < HhCarAllocator.MAX_ITERATIONS; i++ )
        		lpFailedList.get(i).sort( (v1, v2) -> v1.getHousehold().getNumIndivTripRecords() - v2.getHousehold().getNumIndivTripRecords() < 0.0 ? -1 : v1.getHousehold().getNumIndivTripRecords() - v2.getHousehold().getNumIndivTripRecords() > 0.0 ? 1 : 0 );
        	
-       	//for ( int i=0; i < HhCarAllocator.MAX_ITERATIONS; i++ )
-       	//	logger.info( "number of LP failures for end hour: " + HhCarAllocator.MAX_SIMULATION_HOURS[i] + " = " + lpFailedList.get(i).size() + "." );
-        logger.info( "Car Allocator finished." );
-
-        
-        
         try {
-//            if ( ! myClient.isLocalExecutionEnabled() )
-//                forwarder.provisionSlaveNodes(masterSelector, 0, null);
             myClient.close();
         }
         catch (Exception e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }           
-   		
-        return hhAllocationResultsList;
+   		        
+		
+       	//for ( int i=0; i < HhCarAllocator.MAX_ITERATIONS; i++ )
+       	//	logger.info( "number of LP failures for end hour: " + HhCarAllocator.MAX_SIMULATION_HOURS[i] + " = " + lpFailedList.get(i).size() + "." );
+        logger.info( "Car Allocator finished." );
         
 	}
 	
 
 
-	private List<HouseholdCarAllocation> runCarAllocation_v2_mono( HashMap<String, String> propertyMap, Logger logger, ParameterReader parameterInstance, 
-			GeographyManager geogManager, SocioEconomicDataManager socec, VehicleTypePreferences vehicleTypePreferences) {
-	
+	private void runCarAllocation_v2_mono( HashMap<String, String> propertyMap, Logger logger, ParameterReader parameterInstance, 
+		AbmDataStore abmDataStore, int minHhId, int maxHhId, GeographyManager geogManager, SocioEconomicDataManager socec,
+		VehicleTypePreferences vehicleTypePreferences, WriteCarAllocationOutputFilesIf writer) {
 		
-		int minHhId = Integer.valueOf( propertyMap.get( GlobalProperties.MIN_ABM_HH_ID_KEY.toString() ) );
-		int maxHhId = Integer.valueOf( propertyMap.get( GlobalProperties.MAX_ABM_HH_ID_KEY.toString() ) );
+        abmDataStore.populateDataStore( minHhId, maxHhId+1 );
 		
-			
 		logger.info( System.getProperty("java.library.path"));
 	    CarAllocation carAllocation = new CarAllocation( parameterInstance, propertyMap, socec, geogManager, vehicleTypePreferences );
-	    
-	    logger.info( "reading ABM data files ..." );
-	    AbmDataStore abmDataStore = new AbmDataStore( propertyMap );
-	    
-	    minHhId = minHhId >= 0 ? minHhId : abmDataStore.getMinHhId();
-		maxHhId = maxHhId >= 0 ? maxHhId : abmDataStore.getMaxHhId();
-	
-		
-	    abmDataStore.populateDataStore( minHhId, maxHhId+1 );
 	    
 	    Map<Long, Double> minActDurMap = null;
 	    
@@ -263,8 +197,11 @@ public class CarAllocatorMain {
 				  .filter( x -> abmDataStore.getNumAutoTripRecords(x).size() >0 )
 	    		  .mapToObj( hhid -> hhObjectMapper.createHouseholdObjectFromFiles(propertyMap,hhid, null, false) )	    		    
 	  		      .map( carAllocator::getCarAllocationWithSchedulesForHh )
+				  //.filter( x -> x != null )
 	    		  .collect( Collectors.toList() );
 			 
+	    writer.processPartitionResults ( logger, carAllocationResults );
+
 	    /*
 	    List<List<HouseholdCarAllocation>> lpFailedList = new ArrayList<>();
 	   	for ( int i=0; i < carAllocator.MAX_ITERATIONS; i++ )
@@ -282,7 +219,6 @@ public class CarAllocatorMain {
 	    logger.info( "schedule adjustment finished." );
 	    
 	    */
-	    return carAllocationResults;
 	    
 	}
 
@@ -290,11 +226,13 @@ public class CarAllocatorMain {
 
 	public static void main( String[] args ) {
 	
-		long start = System.currentTimeMillis();
+		//Loader.loadNativeLibraries();
 		
+		long start = System.currentTimeMillis();
+				
 	    CarAllocatorMain mainObj = new CarAllocatorMain();
 	
-		System.out.println ( "CarTracker, 01Sep2021, v3.2, starting." );
+		System.out.println ( "CarTracker, 04Oct2021, v3.8, starting." );
 	    
 		ResourceBundle rb = null;
 		if ( args.length >=0 ) {

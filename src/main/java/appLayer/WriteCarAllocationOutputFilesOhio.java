@@ -1034,5 +1034,19 @@ public class WriteCarAllocationOutputFilesOhio implements WriteCarAllocationOutp
 		return votCat;
   }
 
+
+@Override
+public void writeProcessedCarAllocationResults(Logger logger) {
+	// TODO Auto-generated method stub
+	
+}
+
+
+@Override
+public void processPartitionResults(Logger logger, List<HouseholdCarAllocation> hhCarAllocationResultsList) {
+	// TODO Auto-generated method stub
+	
+}
+
 }
 

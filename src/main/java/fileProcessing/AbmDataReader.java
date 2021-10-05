@@ -17,7 +17,7 @@ public class AbmDataReader {
 
 	private static final String REGEX = ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)|(?<=\\[)|(?=\\])";	
 	
-    public static Map<Integer, List<List<String>>> getValuesFromCsvFileForHhIdsAndFields( String filename, String hhIdLabel, Map<String,Integer> fieldIndexMap, int minRange, int maxRange, List<String> headerMap) {
+    public static Map<Integer, List<List<String>>> getValuesFromCsvFileForHhIdsAndFields( String filename, String hhIdLabel, Map<String,Integer> fieldIndexMap, int minRange, int maxRange, List<String> headerMap, int[] hhids) {
 
     	Map< Integer, List<List<String>> > resultMap = new HashMap< Integer, List<List<String>> >();
             	
@@ -64,6 +64,13 @@ public class AbmDataReader {
             while ( ( line = inStream.readLine() ) != null ) {
 
             	recnum++;
+            	try {
+                	if ( hhids[recnum-1] < minRange )
+                		continue;
+            	}
+            	catch(Exception e) {
+               		continue;
+            	}
             	
             	
                 //st = new StringTokenizer( line, delimSet );
