@@ -598,14 +598,14 @@ public class CarAllocation
 	            		//ofVarsIJK[INDEX_SameTripParkDi ][i][k][j].setInteger(true);
 
 	            		//F2, F4
-	            		ofVarsIJK[INDEX_SameTripParkOk ][i][k][j] = solver.makeNumVar( lowerBoundG, uppperBoundG, ( name = "ParkOk_"+i+"_"+k+"_"+j ) );
+	            		ofVarsIJK[INDEX_SameTripParkOk ][i][k][j] = solver.makeNumVar( lowerBoundG, (hh.getIfAvHousehold() == 0 ? 0 : uppperBoundG), ( name = "ParkOk_"+i+"_"+k+"_"+j ) );
 	                    objective.setCoefficient( ofVarsIJK[INDEX_SameTripParkOk][i][k][j], reposCostToNextTripOrigGik + parkCostGik + penaltyForGik);
 	                    ofCoeffList.add( (float) (reposCostToNextTripOrigGik + parkCostGik + penaltyForGik) );
 	            		variableNameList.add( name );
 
 	            		//ofVarsIJK[INDEX_SameTripParkOk ][i][k][j].setInteger(true);
 	            		//F2, F4
-	            		ofVarsIJK[INDEX_SameTripParH  ][i][k][j] = solver.makeNumVar( 0.0, 1, ( name = "ParkH_"+i+"_"+k+"_"+j ) );
+	            		ofVarsIJK[INDEX_SameTripParH  ][i][k][j] = solver.makeNumVar( 0.0, (hh.getIfAvHousehold() == 0 ? 0 : 1), ( name = "ParkH_"+i+"_"+k+"_"+j ) );
 	                    objective.setCoefficient( ofVarsIJK[INDEX_SameTripParH ][i][k][j], reposCostToHome );
 	                    ofCoeffList.add( reposCostToHome );
 	            		variableNameList.add( name );
