@@ -9,10 +9,12 @@ import org.apache.log4j.Logger;
 
 import com.google.ortools.linearsolver.MPSolver;
 
+import appLayer.WriteCarAllocationOutputFilesMag;
 import fileProcessing.AbmDataStore;
 import fileProcessing.GlobalProperties;
 import objects.Household;
-import objects.HouseholdCarAllocation;;
+import objects.HouseholdCarAllocation;
+import objects.Person;;
 
 
 public class HhCarAllocator implements HhCarAllocatorIf, Serializable {
@@ -25,7 +27,7 @@ public class HhCarAllocator implements HhCarAllocatorIf, Serializable {
     public static final int MIN_SIMULATION_TIME = 0;
     public static final float MIN_LOW_DECIMAL_POSITIVE = 0.00001f;
 	public static final int[] MAX_SIMULATION_TIME = { MAX_SIMULATION_HOURS[0]*60, MAX_SIMULATION_HOURS[1]*60, MAX_SIMULATION_HOURS[2]*60 };
-	public static final int MAX_ITERATIONS = 3;
+	public static final int MAX_ITERATIONS = 1;
 	
 	private CarAllocation allocator;
 	private int[] numLpFailures = new int[MAX_ITERATIONS];
@@ -36,6 +38,7 @@ public class HhCarAllocator implements HhCarAllocatorIf, Serializable {
 	boolean runMixedIntergerLP = false;
 	private static String solverType = "CLP_LINEAR_PROGRAMMING";
 	private Boolean logProgress;
+
 	public HhCarAllocator( HashMap<String,String> propertyMap,CarAllocation allocator, AbmDataStore dataStore, Map<Integer, Float> experiencedVehicleTravelTimesMap , Logger logger) {
 		this.allocator = allocator;
 		this.logger = logger;
@@ -48,6 +51,9 @@ public class HhCarAllocator implements HhCarAllocatorIf, Serializable {
 	@Override
 	public HouseholdCarAllocation getCarAllocationWithSchedulesForHh( Household hh ) {
 
+		//if ( hh.getPersons().length != 2 )
+		//	return null;
+		
 		MPSolver solver = null;
 		
 		int iterNum = 0;
@@ -55,7 +61,8 @@ public class HhCarAllocator implements HhCarAllocatorIf, Serializable {
         boolean optimalSolutionFound = false;
 
         //System.out.println("household = " + hh.getId());
-        solverType = "CLP_LINEAR_PROGRAMMING";
+        //solverType = "CLP_LINEAR_PROGRAMMING";
+		solverType = "CBC_MIXED_INTEGER_PROGRAMMING";
         if(runMixedIntergerLP)
 			solverType = "CBC_MIXED_INTEGER_PROGRAMMING";
         
@@ -71,7 +78,7 @@ public class HhCarAllocator implements HhCarAllocatorIf, Serializable {
             solver = allocator.setupLp( hh,logProgress, MAX_SIMULATION_TIME[iterNum] ,xijIntergerization,xijFixFlag,sikjIntergerization,sikjFixFlag,gikjIntergerization,gikjFixFlag,solverType,iterNumForIntegerizing);
             optimalSolutionFound = allocator.solveLp( solver,iterNumForIntegerizing );
             iterNumForIntegerizing++;
-            int numAllocParamters = hh.getAutoTrips().size()*hh.getNumAutos();
+            int numAllocParamters = hh.getAutoTrips().size();
             // set solver type to linear if mixed integer was selected and LP failed
             if(!optimalSolutionFound && iterNum == MAX_ITERATIONS -1 && solverType == "CBC_MIXED_INTEGER_PROGRAMMING"){
             	iterNum = 0;
@@ -94,18 +101,51 @@ public class HhCarAllocator implements HhCarAllocatorIf, Serializable {
             	gikjFixFlag = new int[hh.getNumAutos()][hh.getAutoTrips().size()][hh.getAutoTrips().size()];
             	int numVarChanged = 0;
             	
+            	Person[] persons = hh.getPersons();
+            	
             	// round up Xij and Hikj
             	for(int i = 0; i < hh.getAutoTrips().size(); i++){
+
             		for(int j = 0; j < hh.getNumAutos(); j++){
             			
-            			if(carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > roundUpThresholdXij){
-            				xijFixFlag[i][j] = 1;
-            				xijIntergerization[i][j] = 1;
+            			if(carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > roundUpThresholdXij ){
+            					xijFixFlag[i][j] = 1;
+            					xijIntergerization[i][j] = 1;
+                    			if(carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] < 1 && carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > 0  && carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > MIN_LOW_DECIMAL_POSITIVE ) 
+                    				numVarChanged++;            		
             			}
-            			if(carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] < 1 && carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > 0  && carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > MIN_LOW_DECIMAL_POSITIVE ) 
-            				numVarChanged++;            		
-            			        
+//            			if(carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] < 1 && carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > 0  && carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > MIN_LOW_DECIMAL_POSITIVE ) 
+//            				numVarChanged++;            		
+
             		}
+
+            	
+    				int sumCarTripAllocation = 0;
+	        		int carId2 = -1; 
+    	        	for( int jj=0; jj < carAllocationResults[CarAllocation.INDEX_CarAllo][i].length; jj++) {
+    	        		if (carAllocationResults[CarAllocation.INDEX_CarAllo][i][jj] > WriteCarAllocationOutputFilesMag.threhsoldRoundUp) {
+       	        		//if (carAllocationResults[CarAllocation.INDEX_CarAllo][i][jj] > 0.49) {
+        	        		sumCarTripAllocation ++;
+        	        		if ( carId2 < 0 )
+        	        			carId2 = jj;
+    	        		}
+    	        	}
+        			
+    	        	if ( sumCarTripAllocation > 1 ) {
+    	        		
+	        			for( int jj=0; jj < carAllocationResults[CarAllocation.INDEX_CarAllo][i].length; jj++) {
+    	        			xijFixFlag[i][jj] = 0;
+        					xijIntergerization[i][jj] = 0;
+	        			}
+
+    	        		int carId1 = persons[hh.getAutoTrips().get(i).getPnum()].getUsualCarId();
+    	        		int carId = carId1 >= 0 ? carId1 : carId2;
+	        			xijFixFlag[i][carId] = 1;
+    					xijIntergerization[i][carId] = 1;
+        				numVarChanged++;            		
+
+    	        	}
+        			
             	}
             	boolean optimalSolutionBulkIntegerizedFound = false;
             	boolean optimalSolution2ndBulkIntegerizedFound = false;
@@ -248,10 +288,12 @@ public class HhCarAllocator implements HhCarAllocatorIf, Serializable {
 	                			if(carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] == 1){
 	                				xijFixFlag[i][j] = 1;
 	                        		xijIntergerization[i][j] = 1;
+		                			if(carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] < 1 && carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > 0 && carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > MIN_LOW_DECIMAL_POSITIVE && unsatisDemandResultsIter[i]<roundUpThresholdXij ) 
+		                				numVarChanged++;         			
 	                			}	                			
 	                				
-	                			if(carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] < 1 && carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > 0 && carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > MIN_LOW_DECIMAL_POSITIVE && unsatisDemandResultsIter[i]<roundUpThresholdXij ) 
-	                				numVarChanged++;         			
+//	                			if(carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] < 1 && carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > 0 && carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > MIN_LOW_DECIMAL_POSITIVE && unsatisDemandResultsIter[i]<roundUpThresholdXij ) 
+//	                				numVarChanged++;         			
 	                			                			
 	                			for(int k = i+1; k < hh.getAutoTrips().size(); k++){                				
 	                    			if(carLinkingResults[CarAllocation.INDEX_SameTripParkDi][j][i][k]>maxSikj){
@@ -359,10 +401,12 @@ public class HhCarAllocator implements HhCarAllocatorIf, Serializable {
                 			if(carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] == 1){
                 				xijFixFlag[i][j] = 1;
                         		xijIntergerization[i][j] = 1;
+                    			if(carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] < 1 && carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > 0 && carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > MIN_LOW_DECIMAL_POSITIVE  && unsatisDemandResultsIter[i]<roundUpThresholdXij ) 
+                    				numVarChanged++;
                 			}
                 				
-                			if(carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] < 1 && carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > 0 && carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > MIN_LOW_DECIMAL_POSITIVE  && unsatisDemandResultsIter[i]<roundUpThresholdXij ) 
-                				numVarChanged++;
+//                			if(carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] < 1 && carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > 0 && carAllocationResults[CarAllocation.INDEX_CarAllo][i][j] > MIN_LOW_DECIMAL_POSITIVE  && unsatisDemandResultsIter[i]<roundUpThresholdXij ) 
+//                				numVarChanged++;
                 			
                 			for(int k = i+1; k < hh.getAutoTrips().size(); k++){                				
                     			if(carLinkingResults[CarAllocation.INDEX_SameTripParkDi][j][i][k]>maxSikj && sikjFixFlag[j][i][k] != 1 ){
@@ -413,13 +457,15 @@ public class HhCarAllocator implements HhCarAllocatorIf, Serializable {
             		break;
             	
             }
+            else {
             
-            numLpFailures[iterNum]++;
+		        numLpFailures[iterNum]++;
+		        
+		        
+		        logger.info("Main lp failed for " + hh.getId());
+		        //logger.info(" " );
             
-            
-            logger.info("Mixed lp failed for " + hh.getId());
-            logger.info(" " );
-            
+            }
             
             iterNum++;
         	

@@ -12,12 +12,12 @@ public class Person implements Serializable {
 	private final int personType;
 	private List<Integer> tripIds;
 	private List<Integer> autoDriverTripIds;
-	private final int[] usualCarIds;
+	private final int usualCarId;
 	
-	public Person( int id, int personType, int[] usualCarIds ) {
+	public Person( int id, int personType, int usualCarId ) {
 		this.id = id;
 		this.personType = personType;
-		this.usualCarIds= usualCarIds;
+		this.usualCarId= usualCarId;
 		tripIds = new ArrayList<Integer>();
 		autoDriverTripIds = new ArrayList<Integer>();
 	}
@@ -39,8 +39,8 @@ public class Person implements Serializable {
 		return personType;
 	}
 	
-	public int[] getUsualCarId() {
-		return usualCarIds;
+	public int getUsualCarId() {
+		return usualCarId;
 	}
 	
 	

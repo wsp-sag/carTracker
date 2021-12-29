@@ -95,4 +95,10 @@ public class AutoTrip implements Serializable {
 	public float getValueOfTime(){
 		return vot;
 	}
+	
+	public String toString() {
+		return String.format("id=%d, pnum=%d, hhTRipId=%d, origAct=%d, destAct=%d, origMaz=%d, destMaz=%d, schedDepart=%.2f, schedTime=%.2f, distance=%.2f, minActivityDuartion=%.2f, mode=%d, vot=%.2f",
+			id, pnum, hhTripId, origAct, destAct, origMaz, destMaz, schedDepart, schedTime, distance, minActivityDuartion, mode, vot );
+	}
+	
 }

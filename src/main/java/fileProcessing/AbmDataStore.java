@@ -1,5 +1,6 @@
 package fileProcessing;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -12,7 +13,7 @@ import com.pb.common.util.ResourceUtil;
 import objectMapping.AbmObjectTranslater;
 
 
-public class AbmDataStore {
+public class AbmDataStore implements Serializable {
 
 	public static final int MINUTES_OFFSET_FOR_MINUTES_FROM_3_AM = 180;
 	
@@ -34,6 +35,8 @@ public class AbmDataStore {
 
 	
 	private int[] hhIds;
+	private int[] persHhIds;
+	private int[] tripHhIds;
 	
 	private List<String> hhFieldNames;
 	private Map<Integer, List<List<String>>> hhRecords;
@@ -75,6 +78,9 @@ public class AbmDataStore {
 		requiredHhField = Arrays.asList( 
 				propertyMap.get( AbmObjectTranslater.HH_NUM_AUTO_FIELD_KEY ),
 				propertyMap.get(AbmObjectTranslater.HH_MAZ_KEY),
+				propertyMap.get(AbmObjectTranslater.HH_VEH_FUEL_TYPES_KEY),
+				propertyMap.get(AbmObjectTranslater.HH_VEH_BODY_TYPES_KEY),
+				propertyMap.get(AbmObjectTranslater.HH_VEH_NUMS_KEY),
 				propertyMap.get(AbmObjectTranslater.HH_AV_FLAG_KEY),
 				propertyMap.get(AbmObjectTranslater.HH_ID_WO_SAMPLE_FIELD_KEY));
 		
@@ -94,9 +100,10 @@ public class AbmDataStore {
 			propertyMap.get( AbmObjectTranslater.TRIP_ARRIVE_MINUTE_FIELD_KEY  ),
 			propertyMap.get( AbmObjectTranslater.TRIP_ID_FIELD_KEY ),
 			propertyMap.get( AbmObjectTranslater.TRIP_ORIG_PURP_FIELD_KEY ),
-			 propertyMap.get( AbmObjectTranslater.TRIP_DEST_PURP_FIELD_KEY  ),
-			 propertyMap.get(AbmObjectTranslater.TRIP_ACTIVITY_DURATION_KEY),
-			  propertyMap.get(AbmObjectTranslater.TRIP_VOT_FIELD_KEY)
+			propertyMap.get( AbmObjectTranslater.TRIP_DEST_PURP_FIELD_KEY  ),
+			propertyMap.get(AbmObjectTranslater.TRIP_ACTIVITY_DURATION_KEY),
+			propertyMap.get(AbmObjectTranslater.TRIP_RECNUM_FIELD_KEY),
+			propertyMap.get(AbmObjectTranslater.TRIP_VOT_FIELD_KEY)
 		);
 		 
 		hhRecords = new HashMap<Integer, List<List<String>>>();
@@ -111,7 +118,8 @@ public class AbmDataStore {
         	if ( requiredHhField.get(i) == null )
         		continue;
         	hhFieldIndexMap.put( requiredHhField.get(i), count );
-        	hhIndexFieldMap.put( count++, requiredHhField.get(i) );
+        	hhIndexFieldMap.put( count, requiredHhField.get(i) );
+        	count++;
         }
 		
 		personFieldIndexMap = new HashMap<>();
@@ -121,17 +129,19 @@ public class AbmDataStore {
         	if ( requiredPersonField.get(i) == null )
         		continue;
         	personFieldIndexMap.put( requiredPersonField.get(i), count );
-        	personIndexFieldMap.put( count++, requiredPersonField.get(i) );
+        	personIndexFieldMap.put( count, requiredPersonField.get(i) );
+        	count++;
         }
 		
 		tripFieldIndexMap = new HashMap<>();
 		tripIndexFieldMap = new HashMap<>();
 		count = 0;
         for ( int i=0; i < requiredTripField.size(); i++ ) {
-        	if ( requiredTripField.get(i) == null  )
+        	if ( requiredTripField.get(i) == null || tripFieldIndexMap.containsKey(requiredTripField.get(i)) )
         		continue;
         	tripFieldIndexMap.put( requiredTripField.get(i), count );
-        	tripIndexFieldMap.put( count++, requiredTripField.get(i) );
+        	tripIndexFieldMap.put( count, requiredTripField.get(i) );
+        	count++;
         }
 		
 
@@ -139,9 +149,9 @@ public class AbmDataStore {
 
         String hhidString = hhIdLabel;
         if ( propertyMap.containsKey(AbmObjectTranslater.HH_ID_KEY) )
-        	hhidString = propertyMap.get(AbmObjectTranslater.HH_ID_KEY);      
-		List<List<String>> hhidStringValues = AbmDataReader.getValuesFromCsvFileForFieldNames( inputFileFolder+hhFile, Arrays.asList( new String[] {hhidString} ) );		
-    	
+        	hhidString = propertyMap.get(AbmObjectTranslater.HH_ID_KEY);   
+        
+		List<List<String>> hhidStringValues = AbmDataReader.getValuesFromCsvFileForFieldNames( inputFileFolder+hhFile, Arrays.asList( new String[] {hhidString} ) );		    	
 		List<Integer> tempList = new ArrayList<>();
 		for ( List<String> temp : hhidStringValues )
 			tempList.add( Integer.valueOf( temp.get(0) ) );
@@ -149,6 +159,23 @@ public class AbmDataStore {
 		for ( int i=0; i < tempList.size(); i++ )
 			hhIds[i] = tempList.get(i);
 
+		hhidStringValues = AbmDataReader.getValuesFromCsvFileForFieldNames( inputFileFolder+personFile, Arrays.asList( new String[] {hhidString} ) );		    	
+		tempList = new ArrayList<>();
+		for ( List<String> temp : hhidStringValues )
+			tempList.add( Integer.valueOf( temp.get(0) ) );
+		persHhIds = new int[tempList.size()];
+		for ( int i=0; i < tempList.size(); i++ )
+			persHhIds[i] = tempList.get(i);
+
+		hhidStringValues = AbmDataReader.getValuesFromCsvFileForFieldNames( inputFileFolder+tripFile, Arrays.asList( new String[] {hhidString} ) );		    	
+		tempList = new ArrayList<>();
+		for ( List<String> temp : hhidStringValues )
+			tempList.add( Integer.valueOf( temp.get(0) ) );
+		tripHhIds = new int[tempList.size()];
+		for ( int i=0; i < tempList.size(); i++ )
+			tripHhIds[i] = tempList.get(i);
+
+		
 		int[] minMax = getMinMaxHhid();
         minHhId = minMax[0];
         maxHhId = minMax[1];
@@ -161,7 +188,7 @@ public class AbmDataStore {
 		for ( int id : hhIds ) {
 			if ( id < min )
 				min = id;
-			if ( id > min )
+			if ( id > max )
 				max = id;
 		}
 		return new int[] { min, max };
@@ -201,21 +228,21 @@ public class AbmDataStore {
 		
 		if ( requiredHhField.size() > 0 ) {
 			hhFieldNames = AbmDataReader.getFieldNamesFromCsvFile( inputFileFolder + hhFile );
-			Map<Integer,List<List<String>>> hhMap = AbmDataReader.getValuesFromCsvFileForHhIdsAndFields( inputFileFolder + hhFile, hhIdLabel, hhFieldIndexMap, minRange, maxRange, hhFieldNames );
+			Map<Integer,List<List<String>>> hhMap = AbmDataReader.getValuesFromCsvFileForHhIdsAndFields( inputFileFolder + hhFile, hhIdLabel, hhFieldIndexMap, minRange, maxRange, hhFieldNames, hhIds );
 			for ( int hhid : newHhIds )
 				hhRecords.put( hhid, hhMap.get( hhid ) );
 		}
 
 		if ( requiredPersonField.size() > 0 ) {
 			persFieldNames = AbmDataReader.getFieldNamesFromCsvFile( inputFileFolder + personFile );
-			Map<Integer,List<List<String>>> persMap = AbmDataReader.getValuesFromCsvFileForHhIdsAndFields( inputFileFolder + personFile, hhIdLabel, personFieldIndexMap, minRange, maxRange, persFieldNames );
+			Map<Integer,List<List<String>>> persMap = AbmDataReader.getValuesFromCsvFileForHhIdsAndFields( inputFileFolder + personFile, hhIdLabel, personFieldIndexMap, minRange, maxRange, persFieldNames, persHhIds );
 			for ( int hhid : newHhIds )
 				persRecords.put( hhid, persMap.get( hhid ) );
 		}
 
 		if ( requiredTripField.size() > 0 ) {
 			tripFieldNames = AbmDataReader.getFieldNamesFromCsvFile( inputFileFolder + tripFile );
-			Map<Integer,List<List<String>>> indTripMap = AbmDataReader.getValuesFromCsvFileForHhIdsAndFields( inputFileFolder + tripFile, hhIdLabel, tripFieldIndexMap, minRange, maxRange, tripFieldNames );
+			Map<Integer,List<List<String>>> indTripMap = AbmDataReader.getValuesFromCsvFileForHhIdsAndFields( inputFileFolder + tripFile, hhIdLabel, tripFieldIndexMap, minRange, maxRange, tripFieldNames, tripHhIds );
 			for ( int hhid : newHhIds ){
 				tripRecords.put( hhid, indTripMap.get( hhid ) );
 				if(indTripMap.get( hhid ) !=null){

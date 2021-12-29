@@ -20,7 +20,7 @@ public class RunDosBatch {
         
         ProcessBuilder pb = new ProcessBuilder( Arrays.asList(new String[] {"c:\\windows\\system32\\cmd.exe", "/C", directoryName + "/" + batchFileName} ) );
 
-        final File outputFile = new File(String.format("console_isam_output_%tY%<tm%<td_%<tH%<tM%<tS.txt", System.currentTimeMillis()));
+        final File outputFile = new File(String.format("console_carTracker_output_%tY%<tm%<td_%<tH%<tM%<tS.txt", System.currentTimeMillis()));
         		
         pb.redirectErrorStream(true);
         pb.redirectOutput(outputFile);

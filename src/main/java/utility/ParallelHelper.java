@@ -11,6 +11,8 @@ import org.jppf.node.protocol.AbstractTask;
 import org.jppf.node.protocol.DataProvider;
 import org.jppf.node.protocol.Task;
 
+import objects.HouseholdCarAllocation;
+
 
 
 public class ParallelHelper {
@@ -83,13 +85,18 @@ public class ParallelHelper {
 							Object result = resultBundle.get( 1 );
 
 							if ( result != null ) {
+								List<Integer> runtimes =  (List<Integer>)resultBundle.get( 2 );
+						        //int numItersIntegrizing = (int)resultBundle.get( 3 );
+						        //int numItersOptimalSolution = (int)resultBundle.get( 4 );
+								//taskLogger.info( modelName + " task completed: " + resultName + ", runtimes:" + Parsing.getIntListAsString(runtimes) + " seconds, numItersIntegrizing=" + numItersIntegrizing + ", numItersOptimalSolution=" + numItersOptimalSolution );
+								taskLogger.info( modelName + " task completed: " + resultName + " in " + runtimes.get(3) + " seconds." );
+
 								resultList.add( result );
 							}
 							else {
 				    			System.out.println( "null resultBundle" );
 								System.exit( -1 );
 							}
-							taskLogger.info( modelName + " task completed: " + resultName );
 							
 			    		}
 			    		catch(ClassCastException e) {
