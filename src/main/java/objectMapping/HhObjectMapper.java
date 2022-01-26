@@ -5,6 +5,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.log4j.Logger;
+
+import appLayer.CarAllocatorMain;
 import fileProcessing.AbmDataStore;
 import objects.AbmDataVehicleIdMap;
 import objects.Household;
@@ -32,106 +35,114 @@ public class HhObjectMapper implements HhObjectMapperIf {
 		
 		AbmObjectTranslater abmData = new AbmObjectTranslater( propertyMap, dataStore, experiencedVehicleTravelTimesMap, tripAdjDepMap, abmDataVehicleIdMap, hhid, debugging );
 		
+		try {
+			
+	    	int[] personTypes = abmData.getPersonTypeArray( hhid );
+	    	int[] usualCarIds = abmData.getUsualCarIdArray( hhid );
+	    	int numHhMembers = personTypes.length - 1;
+	    	int numAutos = abmData.getNumAutos(hhid);
+	    	int homeMaz = abmData.getHomeMaz(hhid);
+	    	int[] hhVehFuelTypes = abmData.getHhVehFuelTypes(hhid);
+	    	int[] hhVehBodyTypes = abmData.getHhVehBodyTypes(hhid);
+	    	int[] hhVehNums = abmData.getHhVehNums(hhid);
+	    	int ifAvHh= abmData.getIfAvHousehold(hhid);
+	    	int hidAcrossSample = abmData.getHidAcrossSample(hhid);
+	    	int[] numTrips = abmData.getPersonTripCount( hhid );
+	    	
+	    	int[][] participants = abmData.getJointParticipants();
+	    	int numHhJointTrips = participants.length - 1;
 
-    	int[] personTypes = abmData.getPersonTypeArray( hhid );
-    	int[] usualCarIds = abmData.getUsualCarIdArray( hhid );
-    	int numHhMembers = personTypes.length - 1;
-    	int numAutos = abmData.getNumAutos(hhid);
-    	int homeMaz = abmData.getHomeMaz(hhid);
-    	int[] hhVehFuelTypes = abmData.getHhVehFuelTypes(hhid);
-    	int[] hhVehBodyTypes = abmData.getHhVehBodyTypes(hhid);
-    	int[] hhVehNums = abmData.getHhVehNums(hhid);
-    	int ifAvHh= abmData.getIfAvHousehold(hhid);
-    	int hidAcrossSample = abmData.getHidAcrossSample(hhid);
-    	int[] numTrips = abmData.getPersonTripCount( hhid );
-    	
-    	int[][] participants = abmData.getJointParticipants();
-    	int numHhJointTrips = participants.length - 1;
+	    	int[] numParticipants = new int[ numHhJointTrips+1 ];
+	    	for ( int i=1; i < participants.length; i++ )
+	    		numParticipants[i] = participants[i].length - 1;
+	    	
+	    	int[] numJointTrips = new int[ numHhMembers+1 ];
+	    	int[][] jointTrips = abmData.getPersonJointTripIndices();
+	    	for ( int i=1; i < jointTrips.length; i++ ) {
+	   			if ( jointTrips[i] != null ) {
+	   	    		for ( int j=1; j < jointTrips[i].length; j++ ) {
+	        			if ( jointTrips[i][j] > 0 )
+	        				numJointTrips[i]++;
+	    			}
+	    		}
+	    	}
+	    	
+	    	
+	    	
+	    	int[][] orgActivityType = abmData.getTripOrigActivities();
+	    	int[][] destActivityType = abmData.getTripDestActivities();
+	    	
+	    	int[][] origMazs = abmData.getTripOrigMazs();
+	    	int[][] destMazs = abmData.getTripDestMazs();
+	    	
+	    	float[][] tripPlannedDeparture = abmData.getTripDeparts();
+	    	float[][] tripPlannedTime = abmData.getTripTravelTimes();
+	    	
+	    	int[][] tripModes = abmData.getTripModes();
+	    	int[][] tripRecNums = abmData.getTripRecNums();
+	    	int[][] tripVehIds = abmData.getTripVehIds();
+	    	int[][] assignedTripModes = abmData.getAssignedTripModes();
+	    	int[][] linkedToIds = abmData.getLinkedToIds();
+	    	int[][] jointDriverPnums = abmData.getJointDriverPnums();
+	    	
+	    	float[][] valueOfTime = abmData.getValueOfTime();
+	    	float[][] tripDistance = abmData.getDistances();
+	    	float[][] actvityDurations = abmData.getDurations();
+	    	int[] numCompletedTrips = new int[ numHhMembers+1 ];
+	    	
+	    	
+	    	int[][] uniqueChronologicalIds = abmData.getPersonTripIndices();
+	    	int[][] personTripRecordIds = abmData.getTripFileRecordIndices();
+	    	
+	    	int[][] tripHhAutoTripId = abmData.getTripHhAutoTripId();
+	    	
+	    	int[] autoTripPnum  = null;
+	    	int[] autoOrigPurp =null;
+	    	int[] autoDestPurp = null;
+	    	float[] autoTripDepart = null;
+	    	float[] autoTripTravelTime =null;
+	    	int[] autoTripOrigTaz = null;
+	    	int[] autoTripDestTaz = null;
+	    	int[] autoTripPersonTripId = null;
+	    	float[] autoTripDistance = null;
+	    	int[] autoTripModes = null;
+	    	float[] autoVot = null;
+	    	if(abmData.getNumberOfAutoTrips()>0){
+		    	autoTripPnum = abmData.getAutoTripsPnums();
+		    	autoOrigPurp = abmData.getAutoTripsOrigActs();
+		    	autoDestPurp = abmData.getAutoTripsDestActs();
+		    	autoTripDepart = abmData.getAutoTripsDepart();
+		    	autoTripTravelTime = abmData.getAutoTripsTravelTime();
+		    	autoTripOrigTaz = abmData.getAutoTripsOrigTaz();
+		    	autoTripDestTaz = abmData.getAutoTripsDestTaz();
+		    	autoTripPersonTripId = abmData.getAutoTripsPersonTripId();
+		    	autoTripDistance = abmData.getAutoTripsDistance();
+		    	autoTripModes = abmData.getAutoTripsMode();
+		    	autoVot = abmData.getAutoValueOfTime();
+	    	}
+	    	
+	    	Household hh = HouseholdFactory.getInstance().createHousehold(propertyMap, hhid,hidAcrossSample, uniqueChronologicalIds, numHhMembers, personTypes, usualCarIds,numTrips, numHhJointTrips, numParticipants, participants,
+	        		numJointTrips, jointTrips, orgActivityType, destActivityType, origMazs, destMazs, tripModes, numCompletedTrips, tripPlannedDeparture, tripPlannedTime, tripPlannedTime,
+	        		tripDistance, valueOfTime, tripRecNums, assignedTripModes, tripVehIds, linkedToIds, jointDriverPnums, minActDurMap, numAutos,
+	        		tripHhAutoTripId,autoTripPnum,autoOrigPurp,autoDestPurp,autoTripDepart,autoTripTravelTime,autoTripOrigTaz,autoTripDestTaz,
+	        		autoTripPersonTripId,autoTripDistance, homeMaz,abmData.getNumberOfAutoTrips(),ifAvHh, actvityDurations,autoTripModes,autoVot);
+	        	
+	    	hh.setNumIndivTripRecords( abmData.getNumTripRecords() );
+	    	hh.setNumJointTripRecords( numHhJointTrips );
+	    	hh.setPersonTripRecordIds( personTripRecordIds );
+	    	hh.setHhVehFuelTypes( hhVehFuelTypes );
+	    	hh.setHhVehBodyTypes( hhVehBodyTypes );
+	    	hh.setHhVehNums( hhVehNums );
+	    	
+			return hh;		
 
-    	int[] numParticipants = new int[ numHhJointTrips+1 ];
-    	for ( int i=1; i < participants.length; i++ )
-    		numParticipants[i] = participants[i].length - 1;
-    	
-    	int[] numJointTrips = new int[ numHhMembers+1 ];
-    	int[][] jointTrips = abmData.getPersonJointTripIndices();
-    	for ( int i=1; i < jointTrips.length; i++ ) {
-   			if ( jointTrips[i] != null ) {
-   	    		for ( int j=1; j < jointTrips[i].length; j++ ) {
-        			if ( jointTrips[i][j] > 0 )
-        				numJointTrips[i]++;
-    			}
-    		}
-    	}
-    	
-    	
-    	
-    	int[][] orgActivityType = abmData.getTripOrigActivities();
-    	int[][] destActivityType = abmData.getTripDestActivities();
-    	
-    	int[][] origMazs = abmData.getTripOrigMazs();
-    	int[][] destMazs = abmData.getTripDestMazs();
-    	
-    	float[][] tripPlannedDeparture = abmData.getTripDeparts();
-    	float[][] tripPlannedTime = abmData.getTripTravelTimes();
-    	
-    	int[][] tripModes = abmData.getTripModes();
-    	int[][] tripRecNums = abmData.getTripRecNums();
-    	int[][] tripVehIds = abmData.getTripVehIds();
-    	int[][] assignedTripModes = abmData.getAssignedTripModes();
-    	int[][] linkedToIds = abmData.getLinkedToIds();
-    	int[][] jointDriverPnums = abmData.getJointDriverPnums();
-    	
-    	float[][] valueOfTime = abmData.getValueOfTime();
-    	float[][] tripDistance = abmData.getDistances();
-    	float[][] actvityDurations = abmData.getDurations();
-    	int[] numCompletedTrips = new int[ numHhMembers+1 ];
-    	
-    	
-    	int[][] uniqueChronologicalIds = abmData.getPersonTripIndices();
-    	int[][] personTripRecordIds = abmData.getTripFileRecordIndices();
-    	
-    	int[][] tripHhAutoTripId = abmData.getTripHhAutoTripId();
-    	
-    	int[] autoTripPnum  = null;
-    	int[] autoOrigPurp =null;
-    	int[] autoDestPurp = null;
-    	float[] autoTripDepart = null;
-    	float[] autoTripTravelTime =null;
-    	int[] autoTripOrigTaz = null;
-    	int[] autoTripDestTaz = null;
-    	int[] autoTripPersonTripId = null;
-    	float[] autoTripDistance = null;
-    	int[] autoTripModes = null;
-    	float[] autoVot = null;
-    	if(abmData.getNumberOfAutoTrips()>0){
-	    	autoTripPnum = abmData.getAutoTripsPnums();
-	    	autoOrigPurp = abmData.getAutoTripsOrigActs();
-	    	autoDestPurp = abmData.getAutoTripsDestActs();
-	    	autoTripDepart = abmData.getAutoTripsDepart();
-	    	autoTripTravelTime = abmData.getAutoTripsTravelTime();
-	    	autoTripOrigTaz = abmData.getAutoTripsOrigTaz();
-	    	autoTripDestTaz = abmData.getAutoTripsDestTaz();
-	    	autoTripPersonTripId = abmData.getAutoTripsPersonTripId();
-	    	autoTripDistance = abmData.getAutoTripsDistance();
-	    	autoTripModes = abmData.getAutoTripsMode();
-	    	autoVot = abmData.getAutoValueOfTime();
-    	}
-    	
-    	Household hh = HouseholdFactory.getInstance().createHousehold(propertyMap, hhid,hidAcrossSample, uniqueChronologicalIds, numHhMembers, personTypes, usualCarIds,numTrips, numHhJointTrips, numParticipants, participants,
-        		numJointTrips, jointTrips, orgActivityType, destActivityType, origMazs, destMazs, tripModes, numCompletedTrips, tripPlannedDeparture, tripPlannedTime, tripPlannedTime,
-        		tripDistance, valueOfTime, tripRecNums, assignedTripModes, tripVehIds, linkedToIds, jointDriverPnums, minActDurMap, numAutos,
-        		tripHhAutoTripId,autoTripPnum,autoOrigPurp,autoDestPurp,autoTripDepart,autoTripTravelTime,autoTripOrigTaz,autoTripDestTaz,
-        		autoTripPersonTripId,autoTripDistance, homeMaz,abmData.getNumberOfAutoTrips(),ifAvHh, actvityDurations,autoTripModes,autoVot);
-        	
-    	hh.setNumIndivTripRecords( abmData.getNumTripRecords() );
-    	hh.setNumJointTripRecords( numHhJointTrips );
-    	hh.setPersonTripRecordIds( personTripRecordIds );
-    	hh.setHhVehFuelTypes( hhVehFuelTypes );
-    	hh.setHhVehBodyTypes( hhVehBodyTypes );
-    	hh.setHhVehNums( hhVehNums );
-    	
-		return hh;		
-
+		}
+		catch (Exception e) {
+			Logger logger = Logger.getLogger( CarAllocatorMain.class );
+			logger.error ( "exception caught for hhid=" + hhid, e );
+			throw new RuntimeException(e);
+		}
+		
 	}
 
 }

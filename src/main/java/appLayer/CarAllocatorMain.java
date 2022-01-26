@@ -14,6 +14,7 @@ import org.jppf.client.JPPFClient;
 import org.jppf.node.protocol.DataProvider;
 import org.jppf.node.protocol.MemoryMapDataProvider;
 
+import com.google.ortools.Loader;
 //import com.google.ortools.Loader;
 import com.pb.common.util.ResourceUtil;
 
@@ -41,6 +42,7 @@ public class CarAllocatorMain {
     private static boolean runDistributed = false;
 	public static boolean ortoolsLibLoaded = false;
 	
+	private Logger runTimeLogger =  Logger.getLogger("runTime");
 	
     public Map<Long, double[]> runCarAllocator( ResourceBundle rb, Logger logger, GeographyManager geogManager, SocioEconomicDataManager socec ) {
         
@@ -71,7 +73,7 @@ public class CarAllocatorMain {
         	writer = new WriteCarAllocationOutputFilesOhio(); 
         }
 
-	    logger.info( "reading ABM data files ..." );
+	    logger.info( "creating ABM data store ..." );
 	    AbmDataStore abmDataStore = new AbmDataStore( propertyMap );
 
 	    int minHhId = Integer.valueOf( propertyMap.get( GlobalProperties.MIN_ABM_HH_ID_KEY.toString() ) );
@@ -79,7 +81,7 @@ public class CarAllocatorMain {
 		minHhId = minHhId >= 0 ? minHhId : abmDataStore.getMinHhId();
 		maxHhId = maxHhId >= 0 ? maxHhId : abmDataStore.getMaxHhId();		
         
-	    logger.info( "finished reading ABM data files ..." );
+	    logger.info( "finished creating ABM data store ..." );
 	    
         if(runDistributed)
         	runCarAllocation_v2_distributed( propertyMap, logger, parameterInstance, abmDataStore, minHhId, maxHhId, geogManager, socec, vehicleTypePreferences, writer);
@@ -226,13 +228,13 @@ public class CarAllocatorMain {
 
 	public static void main( String[] args ) {
 	
-		//Loader.loadNativeLibraries();
+		Loader.loadNativeLibraries();
 		
 		long start = System.currentTimeMillis();
 				
 	    CarAllocatorMain mainObj = new CarAllocatorMain();
 	
-		System.out.println ( "CarTracker, 22Oct2021, v3.91, starting." );
+		System.out.println ( "CarTracker, 26Oct2022, v4.00, starting." );
 	    
 		ResourceBundle rb = null;
 		if ( args.length >=0 ) {
@@ -258,6 +260,9 @@ public class CarAllocatorMain {
 	
 		mainObj.runCarAllocator( rb, null, geogManager, socec );
 		
+		String logStatement = String.format( "%s, %.1f seconds.", "CarTracker", ( ( System.currentTimeMillis() - start ) / 1000.0 ) );
+		mainObj.runTimeLogger.info ( logStatement );
+
 		System.out.println ( "Car Tracker finished in " + (int)((System.currentTimeMillis() - start)/1000.0) + " seconds." );
 	    System.out.println ( "\n" );
 	

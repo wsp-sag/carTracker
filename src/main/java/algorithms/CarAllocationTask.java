@@ -98,8 +98,10 @@ public class CarAllocationTask extends AbstractTask<Object> implements Distribut
         HhObjectMapper hhObjectMapper = new HhObjectMapper( propertyMap, abmDataStore, experiencedTravelTimesMap, plannedDepartTimesMap, minActDurMap );        
         HhCarAllocator carAllocator = new HhCarAllocator( propertyMap,carAllocation, abmDataStore, experiencedTravelTimesMap,logger );
 
+		int[] hhIdArray = abmDataStore.getHhIdArrayInRange( startRange, endRange+1 );
+        
         List<HouseholdCarAllocation> hhCarAllocationResults =
-        		Arrays.stream( abmDataStore.getHhIdArrayInRange( startRange, endRange+1 ) )
+        		Arrays.stream( hhIdArray )
   			  .filter( x -> abmDataStore.getTripRecords(x) != null )
   			  .filter( x -> abmDataStore.getNumAutoTripRecords(x).size() >0 )
       		  .mapToObj( hhid -> hhObjectMapper.createHouseholdObjectFromFiles(propertyMap,hhid, null, false) )	    		    

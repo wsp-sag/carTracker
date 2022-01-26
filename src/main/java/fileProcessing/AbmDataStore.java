@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.ResourceBundle;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.pb.common.util.ResourceUtil;
 
@@ -14,6 +15,8 @@ import objectMapping.AbmObjectTranslater;
 
 
 public class AbmDataStore implements Serializable {
+
+	private static final long serialVersionUID = 1L;
 
 	public static final int MINUTES_OFFSET_FOR_MINUTES_FROM_3_AM = 180;
 	
@@ -65,6 +68,7 @@ public class AbmDataStore implements Serializable {
 	private int maxHhId;
 	
 	
+	
 	public AbmDataStore( Map <String, String> propertyMap ) {
 
 		inputFileFolder = propertyMap.get( GlobalProperties.ABM_DATA_FOLDER_FILE_KEY.toString() );
@@ -83,10 +87,12 @@ public class AbmDataStore implements Serializable {
 				propertyMap.get(AbmObjectTranslater.HH_VEH_NUMS_KEY),
 				propertyMap.get(AbmObjectTranslater.HH_AV_FLAG_KEY),
 				propertyMap.get(AbmObjectTranslater.HH_ID_WO_SAMPLE_FIELD_KEY));
+		hhFieldNames = AbmDataReader.getFieldNamesFromCsvFile( inputFileFolder + hhFile );
 		
 		requiredPersonField = Arrays.asList( 
 			propertyMap.get( AbmObjectTranslater.PERSON_TYPE_FIELD_KEY ),
 			propertyMap.get( AbmObjectTranslater.PERSON_USUAL_CAR_ID_FIELD_KEY ));
+		persFieldNames = AbmDataReader.getFieldNamesFromCsvFile( inputFileFolder + personFile );
 			
 		requiredTripField = Arrays.asList( 
 			propertyMap.get( AbmObjectTranslater.TRIP_PNUM_FIELD_KEY ) ,
@@ -105,11 +111,12 @@ public class AbmDataStore implements Serializable {
 			propertyMap.get(AbmObjectTranslater.TRIP_RECNUM_FIELD_KEY),
 			propertyMap.get(AbmObjectTranslater.TRIP_VOT_FIELD_KEY)
 		);
+		tripFieldNames = AbmDataReader.getFieldNamesFromCsvFile( inputFileFolder + tripFile );
 		 
-		hhRecords = new HashMap<Integer, List<List<String>>>();
-		persRecords = new HashMap<Integer, List<List<String>>>();
-		tripRecords = new HashMap<Integer, List<List<String>>>();
-		autoTripRecords = new HashMap<Integer, List<List<String>>>();
+		hhRecords = new ConcurrentHashMap<Integer, List<List<String>>>();
+		persRecords = new ConcurrentHashMap<Integer, List<List<String>>>();
+		tripRecords = new ConcurrentHashMap<Integer, List<List<String>>>();
+		autoTripRecords = new ConcurrentHashMap<Integer, List<List<String>>>();
 		hhFieldIndexMap = new HashMap<>();
 		hhIndexFieldMap = new HashMap<>();
 		
@@ -226,32 +233,27 @@ public class AbmDataStore implements Serializable {
 
 		int[] newHhIds = getHhIdArrayInRange( minRange, maxRange );
 		
-		if ( requiredHhField.size() > 0 ) {
-			hhFieldNames = AbmDataReader.getFieldNamesFromCsvFile( inputFileFolder + hhFile );
-			Map<Integer,List<List<String>>> hhMap = AbmDataReader.getValuesFromCsvFileForHhIdsAndFields( inputFileFolder + hhFile, hhIdLabel, hhFieldIndexMap, minRange, maxRange, hhFieldNames, hhIds );
-			for ( int hhid : newHhIds )
-				hhRecords.put( hhid, hhMap.get( hhid ) );
-		}
+		Map<Integer,List<List<String>>> hhMap = AbmDataReader.getValuesFromCsvFileForHhIdsAndFields( inputFileFolder + hhFile, hhIdLabel, hhFieldIndexMap, minRange, maxRange, hhFieldNames, hhIds );
+		for ( int hhid : newHhIds )
+			hhRecords.put( hhid, hhMap.get( hhid ) );
 
-		if ( requiredPersonField.size() > 0 ) {
-			persFieldNames = AbmDataReader.getFieldNamesFromCsvFile( inputFileFolder + personFile );
-			Map<Integer,List<List<String>>> persMap = AbmDataReader.getValuesFromCsvFileForHhIdsAndFields( inputFileFolder + personFile, hhIdLabel, personFieldIndexMap, minRange, maxRange, persFieldNames, persHhIds );
-			for ( int hhid : newHhIds )
-				persRecords.put( hhid, persMap.get( hhid ) );
-		}
+		Map<Integer,List<List<String>>> persMap = AbmDataReader.getValuesFromCsvFileForHhIdsAndFields( inputFileFolder + personFile, hhIdLabel, personFieldIndexMap, minRange, maxRange, persFieldNames, persHhIds );
+		for ( int hhid : newHhIds )
+			persRecords.put( hhid, persMap.get( hhid ) );
 
-		if ( requiredTripField.size() > 0 ) {
-			tripFieldNames = AbmDataReader.getFieldNamesFromCsvFile( inputFileFolder + tripFile );
-			Map<Integer,List<List<String>>> indTripMap = AbmDataReader.getValuesFromCsvFileForHhIdsAndFields( inputFileFolder + tripFile, hhIdLabel, tripFieldIndexMap, minRange, maxRange, tripFieldNames, tripHhIds );
-			for ( int hhid : newHhIds ){
-				tripRecords.put( hhid, indTripMap.get( hhid ) );
-				if(indTripMap.get( hhid ) !=null){
-					List<List<String>>autoTrips = getAutoTrips(indTripMap.get( hhid ) );
-					autoTripRecords.put(hhid,  autoTrips);
-				}
+		Map<Integer,List<List<String>>> indTripMap = AbmDataReader.getValuesFromCsvFileForHhIdsAndFields( inputFileFolder + tripFile, hhIdLabel, tripFieldIndexMap, minRange, maxRange, tripFieldNames, tripHhIds );
+		for ( int hhid : newHhIds ) {
+			List<List<String>> indTrips = indTripMap.get( hhid );
+			if( indTrips != null ) {
+				tripRecords.put( hhid, indTrips );
+				List<List<String>>autoTrips = getAutoTrips( indTrips );
+				autoTripRecords.put(hhid, autoTrips);
+			}
+			else {
+				tripRecords.put( hhid, new ArrayList<List<String>>(0) );
+				autoTripRecords.put(hhid, new ArrayList<List<String>>(0));
 			}
 		}
-		
 		
 	}
 	

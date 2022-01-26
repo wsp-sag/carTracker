@@ -218,8 +218,8 @@ public class CarAllocation
 //                Properties sysProps = System.getProperties();
 //                String value = (String) sysProps.get("java.class.path");
 //        		
-//                Loader.loadNativeLibraries();
-        	      System.loadLibrary("jniortools");
+                Loader.loadNativeLibraries();
+//        	      System.loadLibrary("jniortools");
             	CarAllocatorMain.ortoolsLibLoaded = true;
         	}
     	}
