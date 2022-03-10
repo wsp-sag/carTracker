@@ -1018,11 +1018,6 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 		List<List<String>> hhecords = dataStore.getHouseholdRecords(hhid);
 		int numAutos = 0;
 	
-		int dummy = 0;
-		if ( hhecords == null ) {
-			dummy = 1;
-		}
-		
 		for ( List<String> record : hhecords ) {
 			String autoValue = record.get( numAutosFieldIndex );
 			numAutos= Integer.parseInt( autoValue );

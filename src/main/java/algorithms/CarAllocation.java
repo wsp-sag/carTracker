@@ -215,9 +215,12 @@ public class CarAllocation
     	synchronized( CarAllocatorMain.class ) {
         	if (! CarAllocatorMain.ortoolsLibLoaded  ) {
 //        		
-//                Properties sysProps = System.getProperties();
-//                String value = (String) sysProps.get("java.class.path");
-//        		
+                //Properties sysProps = System.getProperties();
+                //Logger logger2 = Logger.getLogger(CarAllocation.class);
+                //logger2.info( "node process java.library.path = " + (String) sysProps.get("java.library.path") );
+                //logger2.info( "node process java.class.path = " + (String) sysProps.get("java.class.path") );
+                
+                //Map<String,String> envMap = System.getenv();
                 Loader.loadNativeLibraries();
 //        	      System.loadLibrary("jniortools");
             	CarAllocatorMain.ortoolsLibLoaded = true;
@@ -370,6 +373,10 @@ public class CarAllocation
         			float lowerBound = 0;
         			float uppperBound = 1;
 
+        			// this household should be forced to have an LP failure if bounds are set as follows:
+        			// remove next 2 lines and uncomment following 6 lines, plus restore 2 previous lines to return to normal.
+        			//float lowerBound = 1;
+        			//float uppperBound = 1;
         			if(xijIntegerization!= null){
         				if(xijFixFlag[i][j] == 1){
 	        				lowerBound = xijIntegerization[i][j];

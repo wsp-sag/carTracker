@@ -83,7 +83,7 @@ public class CarAllocationTask extends AbstractTask<Object> implements Distribut
 		start1 = System.currentTimeMillis();
 		
     	// get the hh info and log the report for the debugHhId
-        AbmDataStore abmDataStore = dataProvider.getParameter( "abmDataStore" );
+	    AbmDataStore abmDataStore = new AbmDataStore( propertyMap );
         abmDataStore.populateDataStore( startRange, endRange+1 );
        	        
 		int secs2 = (int)((System.currentTimeMillis() - start1)/1000.0);

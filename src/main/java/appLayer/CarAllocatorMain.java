@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.ResourceBundle;
 import java.util.stream.Collectors;
 
@@ -42,7 +43,6 @@ public class CarAllocatorMain {
     private static boolean runDistributed = false;
 	public static boolean ortoolsLibLoaded = false;
 	
-	private Logger runTimeLogger =  Logger.getLogger("runTime");
 	
     public Map<Long, double[]> runCarAllocator( ResourceBundle rb, Logger logger, GeographyManager geogManager, SocioEconomicDataManager socec ) {
         
@@ -84,7 +84,7 @@ public class CarAllocatorMain {
 	    logger.info( "finished creating ABM data store ..." );
 	    
         if(runDistributed)
-        	runCarAllocation_v2_distributed( propertyMap, logger, parameterInstance, abmDataStore, minHhId, maxHhId, geogManager, socec, vehicleTypePreferences, writer);
+        	runCarAllocation_v2_distributed( propertyMap, logger, parameterInstance, minHhId, maxHhId, geogManager, socec, vehicleTypePreferences, writer);
         else        	
         	runCarAllocation_v2_mono(propertyMap, logger, parameterInstance, abmDataStore, minHhId, maxHhId, geogManager, socec, vehicleTypePreferences, writer);
         
@@ -96,7 +96,7 @@ public class CarAllocatorMain {
 
 	
 	private void runCarAllocation_v2_distributed( Map<String, String> propertyMap, Logger logger, ParameterReader parameterInstance,
-			AbmDataStore abmDataStore, int minHhId, int maxHhId, GeographyManager geogManager, SocioEconomicDataManager socec,
+			int minHhId, int maxHhId, GeographyManager geogManager, SocioEconomicDataManager socec,
 			VehicleTypePreferences vehicleTypePreferences, WriteCarAllocationOutputFilesIf writer ) {
 					    
 
@@ -111,7 +111,6 @@ public class CarAllocatorMain {
         dataProvider.setParameter( "geographyManager", geogManager );
         dataProvider.setParameter( "socioEconomicDataManager", socec );
         dataProvider.setParameter( "vehicleTypePreferences", vehicleTypePreferences );
-        dataProvider.setParameter( "abmDataStore", abmDataStore );
         
         JPPFClient myClient =  new JPPFClient();        
 
@@ -130,7 +129,7 @@ public class CarAllocatorMain {
 
     		logger.info( "running Car allocation for partition " + (p+1) + " of " + numHhPartitions + ", hhids: [" + startHh + "," + endHh + "] ..." );
        		
-	        List<Object> resultList = ParallelHelper.PARALLEL_HELPER_DISTRIBUTER.solveDistributed( CarAllocationTask.MODEL_LABEL, new CarAllocationTask(0,0), myClient, dataProvider, startHh, endHh, numHhsPerJob );
+	        List<Object> resultList = ParallelHelper.PARALLEL_HELPER_DISTRIBUTER.solveDistributedJobs( CarAllocationTask.MODEL_LABEL, new CarAllocationTask(0,0), myClient, dataProvider, startHh, endHh, numHhsPerJob );
     		logger.info( "recieved task resultList." );
 
     		for ( Object result : (List<Object>)resultList ) {
@@ -228,13 +227,18 @@ public class CarAllocatorMain {
 
 	public static void main( String[] args ) {
 	
-		Loader.loadNativeLibraries();
-		
+		//Loader.loadNativeLibraries();
+    	//CarAllocatorMain.ortoolsLibLoaded = true;
+        //Properties sysProps = System.getProperties();
+        //String value = (String) sysProps.get("main process java.library.path");
+        //Logger logger2 = Logger.getLogger(CarAllocation.class);
+        //logger2.info( "main process java.library.path = " + value );
+
 		long start = System.currentTimeMillis();
 				
 	    CarAllocatorMain mainObj = new CarAllocatorMain();
 	
-		System.out.println ( "CarTracker, 26Oct2022, v4.00, starting." );
+		System.out.println ( "CarTracker, 09Mar2022, v4.11, starting." );
 	    
 		ResourceBundle rb = null;
 		if ( args.length >=0 ) {
@@ -260,9 +264,6 @@ public class CarAllocatorMain {
 	
 		mainObj.runCarAllocator( rb, null, geogManager, socec );
 		
-		String logStatement = String.format( "%s, %.1f seconds.", "CarTracker", ( ( System.currentTimeMillis() - start ) / 1000.0 ) );
-		mainObj.runTimeLogger.info ( logStatement );
-
 		System.out.println ( "Car Tracker finished in " + (int)((System.currentTimeMillis() - start)/1000.0) + " seconds." );
 	    System.out.println ( "\n" );
 	
