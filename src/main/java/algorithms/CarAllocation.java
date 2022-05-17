@@ -83,6 +83,29 @@ public class CarAllocation
 	private static final int PERSON_TYPE_UNIV_STUDENT = 3;
 	private static final int PERSON_TYPE_DRV_AGE_STUDENT = 6;
 
+	private static final String AUTO_OPERATING_COST_GAS_BASE_PROPERTY = "auto.operating.cost.gasoline.base";
+	private static final String AUTO_OPERATING_COST_MULTIPLIER_GAS_MC_PROPERTY = "auto.operating.multiplier.gasoline.motorcycle";
+	private static final String AUTO_OPERATING_COST_MULTIPLIER_GAS_MINI_PROPERTY = "auto.operating.multiplier.gasoline.mini";
+	private static final String AUTO_OPERATING_COST_MULTIPLIER_GAS_REGULAR_PROPERTY = "auto.operating.multiplier.gasoline.regular";
+	private static final String AUTO_OPERATING_COST_MULTIPLIER_GAS_SUV_PROPERTY = "auto.operating.multiplier.gasoline.suv";
+	private static final String AUTO_OPERATING_COST_MULTIPLIER_GAS_VAN_PROPERTY = "auto.operating.multiplier.gasoline.van";
+	private static final String AUTO_OPERATING_COST_MULTIPLIER_GAS_PICKUP_PROPERTY = "auto.operating.multiplier.gasoline.pickup";
+	private static final String AUTO_OPERATING_COST_HYB_BASE_PROPERTY = "auto.operating.cost.hybrid.base";
+	private static final String AUTO_OPERATING_COST_MULTIPLIER_HYB_MC_PROPERTY = "auto.operating.multiplier.hybrid.motorcycle";
+	private static final String AUTO_OPERATING_COST_MULTIPLIER_HYB_MINI_PROPERTY = "auto.operating.multiplier.hybrid.mini";
+	private static final String AUTO_OPERATING_COST_MULTIPLIER_HYB_REGULAR_PROPERTY = "auto.operating.multiplier.hybrid.regular";
+	private static final String AUTO_OPERATING_COST_MULTIPLIER_HYB_SUV_PROPERTY = "auto.operating.multiplier.hybrid.suv";
+	private static final String AUTO_OPERATING_COST_MULTIPLIER_HYB_VAN_PROPERTY = "auto.operating.multiplier.hybrid.van";
+	private static final String AUTO_OPERATING_COST_MULTIPLIER_HYB_PICKUP_PROPERTY = "auto.operating.multiplier.hybrid.pickup";
+	private static final String AUTO_OPERATING_COST_EV_BASE_PROPERTY = "auto.operating.cost.electric.base";
+	private static final String AUTO_OPERATING_COST_MULTIPLIER_EV_MC_PROPERTY = "auto.operating.multiplier.electric.motorcycle";
+	private static final String AUTO_OPERATING_COST_MULTIPLIER_EV_MINI_PROPERTY = "auto.operating.multiplier.electric.mini";
+	private static final String AUTO_OPERATING_COST_MULTIPLIER_EV_REGULAR_PROPERTY = "auto.operating.multiplier.electric.regular";
+	private static final String AUTO_OPERATING_COST_MULTIPLIER_EV_SUV_PROPERTY = "auto.operating.multiplier.electric.suv";
+	private static final String AUTO_OPERATING_COST_MULTIPLIER_EV_VAN_PROPERTY = "auto.operating.multiplier.electric.van";
+	private static final String AUTO_OPERATING_COST_MULTIPLIER_EV_PICKUP_PROPERTY = "auto.operating.multiplier.electric.pickup";
+
+
 	private static final int SOV_MODE = 1;
 	private static final int HOV2_MODE = 2;
 	private static final int HOV3p_MODE = 3;
@@ -201,6 +224,10 @@ public class CarAllocation
 
 	private VehicleTypePreferences vehicleTypePreferences;
 	
+	private List<Double> fuelTypeBaseCosts;
+	private List<List<Double>> fuelTypeBodyTypeOpCostMulipliers;
+	
+	
 	private float unsatisfiedDemandDistancePenalty = 0;
 	//private float repositionCostPerMile = 0;
 	private float usualDrBonus = 0;
@@ -252,6 +279,7 @@ public class CarAllocation
 		logHhId = Integer.valueOf( propertyMap.get( GlobalProperties.HHID_LOG_REPORT_KEY.toString() ) );
 		minimumActivityDuration= Float.parseFloat(propertyMap.get("min.activity.duration"));
 
+		getOperatingCostPropertyValues( propertyMap );
     }
 
 
@@ -411,6 +439,12 @@ public class CarAllocation
 
 					
 	        		float repoCostForHh = vehicleTypePreferences.getOperatingCostDisutil(fuelType, bodyType);
+	        		
+	    			// fuel type indices are defined as gas=2, hyb=3, ev=4, so subtract 2 to get indices for lists: 0, 1, 2
+	    			int ftIndex = fuelType - 2;
+	    			// body type indices are defined as 1-6, so subtract 1 to get indices for lists: 0-5
+	    			int btIndex = bodyType - 1;
+	    			repoCostForHh = (float)(fuelTypeBaseCosts.get(ftIndex) * fuelTypeBodyTypeOpCostMulipliers.get(ftIndex).get(btIndex));
 	        		
 	        		float autoOperatingCost = repoCostForHh;
 	        		float costOfCurrentTrip = aTrip.getDistance()*autoOperatingCost;
@@ -1326,4 +1360,43 @@ public double[] getUnsatisfiedRemandResults( Household hh, MPSolver solver ) {
  	return carLinkingResults;
 
  }
+
+
+	private void getOperatingCostPropertyValues( HashMap<String,String> propertyMap ) {
+		
+		fuelTypeBaseCosts = new ArrayList<>();
+		fuelTypeBaseCosts.add( Double.valueOf( propertyMap.get( AUTO_OPERATING_COST_GAS_BASE_PROPERTY ) ) );
+		fuelTypeBaseCosts.add( Double.valueOf( propertyMap.get( AUTO_OPERATING_COST_HYB_BASE_PROPERTY ) ) );
+		fuelTypeBaseCosts.add( Double.valueOf( propertyMap.get( AUTO_OPERATING_COST_EV_BASE_PROPERTY ) ) );
+
+		fuelTypeBodyTypeOpCostMulipliers = new ArrayList<>();
+		List<Double> tempList = new ArrayList<>();
+		tempList.add( Double.valueOf( propertyMap.get( AUTO_OPERATING_COST_MULTIPLIER_GAS_MC_PROPERTY ) ) );
+		tempList.add( Double.valueOf( propertyMap.get( AUTO_OPERATING_COST_MULTIPLIER_GAS_MINI_PROPERTY ) ) );
+		tempList.add( Double.valueOf( propertyMap.get( AUTO_OPERATING_COST_MULTIPLIER_GAS_REGULAR_PROPERTY ) ) );
+		tempList.add( Double.valueOf( propertyMap.get( AUTO_OPERATING_COST_MULTIPLIER_GAS_SUV_PROPERTY ) ) );
+		tempList.add( Double.valueOf( propertyMap.get( AUTO_OPERATING_COST_MULTIPLIER_GAS_VAN_PROPERTY ) ) );
+		tempList.add( Double.valueOf( propertyMap.get( AUTO_OPERATING_COST_MULTIPLIER_GAS_PICKUP_PROPERTY ) ) );
+		fuelTypeBodyTypeOpCostMulipliers.add(tempList);
+
+		tempList = new ArrayList<>();
+		tempList.add( Double.valueOf( propertyMap.get( AUTO_OPERATING_COST_MULTIPLIER_HYB_MC_PROPERTY ) ) );
+		tempList.add( Double.valueOf( propertyMap.get( AUTO_OPERATING_COST_MULTIPLIER_HYB_MINI_PROPERTY ) ) );
+		tempList.add( Double.valueOf( propertyMap.get( AUTO_OPERATING_COST_MULTIPLIER_HYB_REGULAR_PROPERTY ) ) );
+		tempList.add( Double.valueOf( propertyMap.get( AUTO_OPERATING_COST_MULTIPLIER_HYB_SUV_PROPERTY ) ) );
+		tempList.add( Double.valueOf( propertyMap.get( AUTO_OPERATING_COST_MULTIPLIER_HYB_VAN_PROPERTY ) ) );
+		tempList.add( Double.valueOf( propertyMap.get( AUTO_OPERATING_COST_MULTIPLIER_HYB_PICKUP_PROPERTY ) ) );
+		fuelTypeBodyTypeOpCostMulipliers.add(tempList);
+		
+		tempList = new ArrayList<>();
+		tempList.add( Double.valueOf( propertyMap.get( AUTO_OPERATING_COST_MULTIPLIER_EV_MC_PROPERTY ) ) );
+		tempList.add( Double.valueOf( propertyMap.get( AUTO_OPERATING_COST_MULTIPLIER_EV_MINI_PROPERTY ) ) );
+		tempList.add( Double.valueOf( propertyMap.get( AUTO_OPERATING_COST_MULTIPLIER_EV_REGULAR_PROPERTY ) ) );
+		tempList.add( Double.valueOf( propertyMap.get( AUTO_OPERATING_COST_MULTIPLIER_EV_SUV_PROPERTY ) ) );
+		tempList.add( Double.valueOf( propertyMap.get( AUTO_OPERATING_COST_MULTIPLIER_EV_VAN_PROPERTY ) ) );
+		tempList.add( Double.valueOf( propertyMap.get( AUTO_OPERATING_COST_MULTIPLIER_EV_PICKUP_PROPERTY ) ) );
+		fuelTypeBodyTypeOpCostMulipliers.add(tempList);
+		
+	}
+	
 }

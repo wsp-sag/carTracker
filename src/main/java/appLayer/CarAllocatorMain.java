@@ -129,7 +129,7 @@ public class CarAllocatorMain {
 
     		logger.info( "running Car allocation for partition " + (p+1) + " of " + numHhPartitions + ", hhids: [" + startHh + "," + endHh + "] ..." );
        		
-	        List<Object> resultList = ParallelHelper.PARALLEL_HELPER_DISTRIBUTER.solveDistributed( CarAllocationTask.MODEL_LABEL, new CarAllocationTask(0,0), myClient, dataProvider, startHh, endHh, numHhsPerJob );
+	        List<Object> resultList = ParallelHelper.PARALLEL_HELPER_DISTRIBUTER.solveDistributedJobs( CarAllocationTask.MODEL_LABEL, new CarAllocationTask(0,0), myClient, dataProvider, startHh, endHh, numHhsPerJob );
     		logger.info( "recieved task resultList." );
 
     		for ( Object result : (List<Object>)resultList ) {
@@ -238,7 +238,7 @@ public class CarAllocatorMain {
 				
 	    CarAllocatorMain mainObj = new CarAllocatorMain();
 	
-		System.out.println ( "CarTracker, 13Apr2022, v4.14, starting." );
+		System.out.println ( "CarTracker, 17May2022, v4.16, starting." );
 	    
 		ResourceBundle rb = null;
 		if ( args.length >=0 ) {
