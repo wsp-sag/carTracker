@@ -104,6 +104,7 @@ public class CarAllocatorMain {
 		int numHhPartitions = Integer.valueOf( propertyMap.get( GlobalProperties.NUM_HH_PARTITIONS.toString() ) );
 		int numHhsPerPartition = (maxHhId - minHhId)/numHhPartitions;
 
+	    AbmDataStore abmDataStore = new AbmDataStore( propertyMap );
 
 		DataProvider dataProvider = new MemoryMapDataProvider();
         dataProvider.setParameter( "parameterInstance", parameterInstance );
@@ -111,6 +112,7 @@ public class CarAllocatorMain {
         dataProvider.setParameter( "geographyManager", geogManager );
         dataProvider.setParameter( "socioEconomicDataManager", socec );
         dataProvider.setParameter( "vehicleTypePreferences", vehicleTypePreferences );
+        dataProvider.setParameter( "abmDataStore", abmDataStore );
         
         JPPFClient myClient =  new JPPFClient();        
 
@@ -238,7 +240,7 @@ public class CarAllocatorMain {
 				
 	    CarAllocatorMain mainObj = new CarAllocatorMain();
 	
-		System.out.println ( "CarTracker, 17May2022, v4.16, starting." );
+		System.out.println ( "CarTracker, 27Jun2022, v4.2, starting." );
 	    
 		ResourceBundle rb = null;
 		if ( args.length >=0 ) {

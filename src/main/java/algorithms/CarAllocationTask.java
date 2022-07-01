@@ -77,13 +77,16 @@ public class CarAllocationTask extends AbstractTask<Object> implements Distribut
         geogManager = dataProvider.getParameter("geographyManager");
         socec = dataProvider.getParameter("socioEconomicDataManager");
 		vehicleTypePreferences = (VehicleTypePreferences)dataProvider.getParameter( "vehicleTypePreferences" );
+		AbmDataStore abmDataStore = (AbmDataStore)dataProvider.getParameter( "abmDataStore" );
+		
+		
         CarAllocation carAllocation = new CarAllocation( parameterInstance,propertyMap, socec,geogManager,vehicleTypePreferences );
         
 		int secs1 = (int)((System.currentTimeMillis() - start1)/1000.0);
 		start1 = System.currentTimeMillis();
 		
     	// get the hh info and log the report for the debugHhId
-	    AbmDataStore abmDataStore = new AbmDataStore( propertyMap );
+	    //AbmDataStore abmDataStore = new AbmDataStore( propertyMap );
         abmDataStore.populateDataStore( startRange, endRange+1 );
        	        
 		int secs2 = (int)((System.currentTimeMillis() - start1)/1000.0);

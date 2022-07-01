@@ -124,7 +124,7 @@ public class ParallelHelper {
 	    	
 			List<Object> resultList = new ArrayList<Object>();
 
-			int numJobs = 10;
+			int numJobs = 5;
 			
 	    	try {
 
