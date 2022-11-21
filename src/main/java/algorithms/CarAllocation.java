@@ -467,7 +467,7 @@ public class CarAllocation
 	        			reposCostOH= costOfCurrentTrip;
 
 	        		
-					double coeffValue = -usualDrBonus*usualDrDummy + carAllocationPreference + (-0.01*diffPnumAuto) + (-0.001*vehTypeCategory) + (-0.1*costOfCurrentTrip);
+					double coeffValue = (bodyType==1 ? 0 : -usualDrBonus*usualDrDummy) + carAllocationPreference + (-0.01*diffPnumAuto) + (-0.001*vehTypeCategory) + (-0.1*costOfCurrentTrip);
 
 					if(logHhId == hh.getId() )
 						logger.info( String.format( "i=%d, j=%d, pnum=%d, usualDrBonus=%.3f, usualDrDummy=%d, carAllocationPreference=%.3f, -0.01*diffPnumAuto=%.0f, -0.001*vehTypeCategory=%d, costOfCurrentTrip=%.3f, coeffValue=%.3f", i, j, aTrip.getPnum(), usualDrBonus, usualDrDummy, carAllocationPreference, diffPnumAuto, vehTypeCategory, costOfCurrentTrip, coeffValue ) );

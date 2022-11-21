@@ -3,7 +3,7 @@ apply plugin: 'eclipse'
 
 jar {
     baseName = 'carTracker'
-    version =  '27Jun2022_v4.2'
+    version =  '12Oct2022_v4.3'
 }
  
 repositories {
