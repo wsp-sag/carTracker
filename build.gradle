@@ -1,28 +1,34 @@
-apply plugin: 'java'
- 
+plugins {
+    id 'java'
+    id 'eclipse'
+}
+
 jar {
-    baseName = 'carTracker'
-    version =  '22Oct2021_v3.91'
+    archiveBaseName = 'carTracker'
+    archiveVersion =  '12Oct2022_v4.3'
 }
  
 repositories {
     mavenCentral()
 }
- 
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
  
 dependencies {
-	compile files('../CMF/common-base/bin')
-	compile fileTree(dir: '../CMF/common-base/lib', include: '*.jar')
-	compile fileTree(dir: 'lib', include: '*.jar')
-    compile group: 'org.jppf', name: 'jppf-common', version: '5.2.1'
-    compile group: 'org.jppf', name: 'jppf-client', version: '5.2.1'
-    compile group: 'org.jppf', name: 'jppf-node', version: '5.2.1'
-    compile group: 'net.sourceforge.jexcelapi', name: 'jxl', version: '2.6.12'
-    compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.5'
-    compile group: 'com.google.collections', name: 'google-collections', version: '1.0-rc2'
+    implementation files('../CMF_2/common-base/build/libs/common_base-all.jar')
+    implementation fileTree(dir: '../CMF_2/common-base/lib', include: '*.jar')
+    implementation fileTree(dir: 'lib', include: '*.jar')
+    implementation group: 'org.jppf', name: 'jppf-common', version: '6.2'
+    implementation group: 'org.jppf', name: 'jppf-client', version: '6.2'
+    implementation group: 'org.jppf', name: 'jppf-node', version: '6.2'
+    implementation group: 'net.sourceforge.jexcelapi', name: 'jxl', version: '2.6.12'
+    implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.5'
+    implementation group: 'com.google.collections', name: 'google-collections', version: '1.0-rc2'
     
-	implementation 'com.google.ortools:ortools-java:9.0.9048'
-	implementation group: 'com.google.protobuf', name: 'protobuf-java-util', version: '3.15.8'    
+    implementation 'com.google.ortools:ortools-java:9.2.9972'
+    implementation group: 'com.google.protobuf', name: 'protobuf-java-util', version: '3.15.8'    
 }
