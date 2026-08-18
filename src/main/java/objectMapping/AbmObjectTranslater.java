@@ -514,6 +514,10 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 				numAutoTrips++;
 		}
 		int[] autoTripId = new int[ numAutoTrips+1 ];
+		// the trip's own stable, order-independent unique ID, keyed by THIS method's own autoTripNum
+		// (not method A's/getAllTripInformation's tripNum -- those two counters are independently
+		// incremented and are not safe to cross-index between each other's arrays).
+		int[] autoTripUniqueId = new int[ numAutoTrips+1 ];
 		int[] autoTripPnums = new int[ numAutoTrips+1 ];
 		float[] autoTripDeparts = new float[ numAutoTrips+1 ];
 		int[] autoTripOrigTazs = new int[ numAutoTrips+1 ];
@@ -599,6 +603,7 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 					// get information of auto trips
 				if(mode == SOV_MODE || mode == HOV2_DR_MODE || mode == HOV3_DR_MODE){
 					autoTripId[autoTripNum] = autoTripNum;
+					autoTripUniqueId[autoTripNum] = uniqueTripIds[tripNum];
 					autoTripPnums[autoTripNum] = pnum;
 					autoTripDeparts[autoTripNum] =  Float.parseFloat( departValue );
 					autoTripOrigTazs[autoTripNum] = omaz;
@@ -643,6 +648,7 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 		autoTripsResultList.add(autoTripTravelTime);
 		autoTripsResultList.add(vot);
 		autoTripsResultList.add(autoModes);
+		autoTripsResultList.add(autoTripUniqueId); // 14
 		
 		return autoTripsResultList;
 		
@@ -742,6 +748,13 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 		
 		int[] tripIds = (int[])tripInfo.get(6);
 		int[] tripPnums = (int[])tripInfo.get(4);
+		// getAutoTripInformation's own per-autoTripNum unique-ID array -- used below to correlate
+		// against chronologicalAutoTripIndices (also sourced from that method). Do NOT correlate via
+		// tripsHhAutoTripId (this method's own, separately-incremented auto-trip counter) against
+		// chronologicalAutoTripIndices (the OTHER method's counter) -- the two counters are each
+		// incremented inside their own per-row try/catch and are not guaranteed to stay in lockstep
+		// if a row throws in one method but not the other.
+		int[] autoTripUniqueIds = ( numAutoTrips > 0 && autoTripInfo.size() > 0 ) ? (int[])autoTripInfo.get(14) : null;
 
 		int[] personCount = new int[personTrips.length];
 		for ( int i=1; i < personTrips.length; i++ ) {
@@ -785,17 +798,23 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 			personJointDriverPnum[pnum][k] = jointDriverPnum[index];
 			personTripMinActDur[pnum][k] = tripMinActDur[index];
 			personActivityDuration[pnum][k] = vot[index];
-			/*
-			if(chronologicalAutoTripIndices != null && tripsHhAutoTripId[index]> 0)
-				personHhAutoTripId[pnum][k] = chronologicalAutoTripIndices[tripsHhAutoTripId[index]-1]-1;
-			else if(chronologicalAutoTripIndices != null)
-				personHhAutoTripId[pnum][k] = -1;
-			*/
-			
-			if (numAutoTrips> 0)
-				personHhAutoTripId[pnum][k] = Arrays.asList(chronologicalAutoTripIndices).indexOf(tripsHhAutoTripId[index]);
-			else
-				personHhAutoTripId[pnum][k] = -1;
+			// correlate this row's own stable unique ID (tripIds[index] -- NOT tripIds[i]; `index` is
+			// what chronologicalTripIndices[tripIds[i]-1] actually resolved to, and every other read
+			// in this loop iteration (tripPnums[index], tripOrigPurps[index], etc.) already operates
+			// on `index`, not `i`) against chronologicalAutoTripIndices/autoTripUniqueIds (both from
+			// getAutoTripInformation's own numbering) to find its chronological rank among auto trips,
+			// order-independent of any divergence between this method's and getAutoTripInformation's
+			// separate row counters.
+			personHhAutoTripId[pnum][k] = -1;
+			if ( numAutoTrips > 0 && tripsHhAutoTripId[index] > 0 ) {
+				for ( int rank = 0; rank < chronologicalAutoTripIndices.length; rank++ ) {
+					int autoTripNum = chronologicalAutoTripIndices[rank];
+					if ( autoTripUniqueIds[autoTripNum] == tripIds[index] ) {
+						personHhAutoTripId[pnum][k] = rank;
+						break;
+					}
+				}
+			}
 			
 			personActivityDuration[pnum][k] = activityDuration[index];
 			personCount[pnum]++;
@@ -838,7 +857,8 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 		int[] autoTripsPersonTripId = null;
 		int[] autoMode = null;
 		float[] vot = null;
-		
+		int[] autoTripUniqueIds = null;
+
 		if ( autoTripInfo.size() > 0 ) {
 			tripPnums = (int[])autoTripInfo.get(0);
 			tripDeparts = (float[])autoTripInfo.get(1);
@@ -851,8 +871,9 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 			tripTravelTimes = (float[])autoTripInfo.get(11);
 			vot = (float[])autoTripInfo.get(12);
 			autoMode = (int[])autoTripInfo.get(13);
+			autoTripUniqueIds = (int[])autoTripInfo.get(14);
 
-		}	
+		}
 
 		int[] hhTripPnum = new int[hhAutoTrips+1];
 		int[] hhTripOrigActs = new int[ hhAutoTrips+1 ];
@@ -865,16 +886,17 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 		float[] hhTripDistances = new float[ hhAutoTrips+1];
 		float[] tripVot = new float[ hhAutoTrips+1];
 		int[] tripMode = new int[ hhAutoTrips+1];
-		
+		// the trip's own stable, order-independent unique ID -- see AutoTrip.uniqueTripId javadoc.
+		int[] hhTripUniqueId = new int[ hhAutoTrips+1 ];
+
 
 		int[] autoTripIds = (int[])autoTripInfo.get(9);
-		int[] allTripIds = (int[])tripInfo.get(6);
-		
+
 		for ( int i=1; i < autoTripIds.length; i++ ) {
 			int index = chronologicalAutoTripIndices[ autoTripIds[i]-1 ];
 			hhTripPnum[i] = tripPnums[index];
-			hhTripOrigActs[i] = tripOrigPurps[index];					
-			hhTripDestActs[i] = tripDestPurps[index];					
+			hhTripOrigActs[i] = tripOrigPurps[index];
+			hhTripDestActs[i] = tripDestPurps[index];
 			hhTripDeparts[i] = tripDeparts[index];
 			hhTripTravelTimes[i] = tripTravelTimes[index];
 			hhTripOrigMazs[i] = tripOrigMazs[index];
@@ -885,8 +907,12 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 			//hhTripPersonTripId[i]=  chronologicalTripIndices[autoTripIds[i]-1]-1;
 			hhTripPersonTripId[i]=  indexAuto-1;
 			hhTripDistances[i] = tripDistances[index];
-		}		
-		
+			// index here is an autoTripNum (this method's own numbering, matching chronologicalAutoTripIndices)
+			// -- must read from an array indexed the same way, NOT tripInfo.get(6) (getAllTripInformation's
+			// per-all-rows array, indexed by that method's separate tripNum counter).
+			hhTripUniqueId[i] = autoTripUniqueIds[index];
+		}
+
 		List<Object> resultList = new ArrayList<Object>();
 		resultList.add( hhTripPnum );
 		resultList.add( hhTripOrigActs );
@@ -899,9 +925,10 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 		resultList.add( hhTripDistances );
 		resultList.add(tripMode);
 		resultList.add(tripVot);
-		
+		resultList.add(hhTripUniqueId);
+
 		return resultList;
-		
+
 	}
 	
 	public int[] getPersonTripCount( int hhid ) {
@@ -1329,6 +1356,9 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 	}
 	public int[] getAutoTripsPersonTripId() {
 		return (int[])odAutoArrayObjects.get(7);
+	}
+	public int[] getAutoTripsUniqueTripId() {
+		return (int[])odAutoArrayObjects.get(11);
 	}
 	public float[] getAutoTripsDistance() {
 		return (float[])odAutoArrayObjects.get(8);

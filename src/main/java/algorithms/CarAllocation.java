@@ -804,11 +804,20 @@ public class CarAllocation
     		int ad = purposeMap.get( aTrip.getDestAct() );
 
     		int pt = persons[aTrip.getPnum()].getPersonType();
-    		int hhTripNum = aTrip.getHhTripId();
+    		Trip resolvedTrip = hh.getTripByUniqueId( aTrip.getUniqueTripId() );
 
-    		int pnum = trips.get(hhTripNum).getPnum();
-    		int personTripId = trips.get(hhTripNum).getIndivTripId();
+    		int pnum = resolvedTrip.getPnum();
+    		int personTripId = resolvedTrip.getIndivTripId();
     		int emptyRepoConstraint = 1-hh.getIfAvHousehold();
+    		// precompute (i,k)-only values once per i, reused across every j below -- these don't
+    		// depend on j but were previously recomputed inside the j-loop for every (i,j,k) triple.
+    		int[] pnumNextByK = new int[ autoTrips.size() ];
+    		int[] personNextTripIdByK = new int[ autoTrips.size() ];
+    		for ( int k = i+1; k < autoTrips.size(); k++ ) {
+    			Trip resolvedNextTripForK = hh.getTripByUniqueId( autoTrips.get(k).getUniqueTripId() );
+    			pnumNextByK[k] = resolvedNextTripForK.getPnum();
+    			personNextTripIdByK[k] = resolvedNextTripForK.getIndivTripId();
+    		}
     		for ( int j=0; j < numAutos; j++ )     {
         		rhsLP5[INDEX_2_1][i][j] = 0;
         		constraintsLP5[INDEX_2_1][i][j] = solver.makeConstraint(rhsLP5[INDEX_2_1][i][j], rhsLP5[INDEX_2_1][i][j], (name = "Const_2_1"+"_"+i+"_"+j));
@@ -849,9 +858,8 @@ public class CarAllocation
 	        		int destMazNextTrip = -1;
 	        		int origTazNextTrip = -1;
 	        		int destTazNextTrip = -1;
-	        		int hhNextTripNum = nextATrip.getHhTripId();
-	        		int pnumNext = trips.get(hhNextTripNum).getPnum();
-	        		int personNextTripId = trips.get(hhNextTripNum).getIndivTripId();
+	        		int pnumNext = pnumNextByK[k];
+	        		int personNextTripId = personNextTripIdByK[k];
 
 	    			origMazNextTrip = nextATrip.getOrigMaz();
 	    			destMazNextTrip = nextATrip.getDestMaz();
@@ -969,21 +977,24 @@ public class CarAllocation
 	    		int autoTripId = trips.get( tripIds.get( 0) ).getHhAutoTripId();
 	    		Trip trip = trips.get( tripIds.get( 0) );
 
-	    		int driverTripNum = -1;
+	    		Trip driverTrip = null;
         		int driverPnum = m;
         		if(autoTripId >=0){
         			AutoTrip aTrip = autoTrips.get(autoTripId);
-        			driverTripNum = aTrip.getHhTripId();
-        			driverPnum = aTrip.getPnum();
+        			// resolve via the trip's own stable unique ID (order-independent) -- do not use
+        			// getHhTripId()/trips.get(), which is a raw file-read-order position that does not
+        			// reliably match the ascending-pnum order `trips` is actually built in.
+        			driverTrip = hh.getTripByUniqueId( aTrip.getUniqueTripId() );
+        			driverPnum = driverTrip.getPnum();
         		}
 
 
 
 	    		if(driverPnum != m ){
-	    			if(driverTripNum == -1)
-		    			driverTripNum = tripIds.get( 0);
+	    			if(driverTrip == null)
+		    			driverTrip = trips.get( tripIds.get( 0) );
 
-		    		Trip linkedTrip = trips.get(  driverTripNum );
+	    			Trip linkedTrip = driverTrip;
 
 		    		int pq = trip.getIndivTripId();
 		    		int ipq = linkedTrip.getIndivTripId();
@@ -1014,21 +1025,21 @@ public class CarAllocation
 	        		constraintNameList.add( name );
 
 	        		autoTripId = trips.get( tripIds.get( q) ).getHhAutoTripId();
-	        		driverTripNum = -1;
+	        		driverTrip = null;
 	        		driverPnum = m;
 	        		if(autoTripId >=0){
 	        			AutoTrip aTrip = autoTrips.get(autoTripId);
-	        			driverTripNum = aTrip.getHhTripId();
-	        			driverPnum = aTrip.getPnum();
+	        			driverTrip = hh.getTripByUniqueId( aTrip.getUniqueTripId() );
+	        			driverPnum = driverTrip.getPnum();
 	        		}
 
-		    		if(driverTripNum == -1)
-		    			driverTripNum = tripIds.get( q);
+		    		if(driverTrip == null)
+		    			driverTrip = trips.get( tripIds.get( q) );
 
 
 
 		    		if(driverPnum != m ){
-		    			Trip linkedTrip = trips.get(  driverTripNum );
+		    			Trip linkedTrip = driverTrip;
 
 			    		int pq = trip.getIndivTripId();
 			    		int ipq = linkedTrip.getIndivTripId();

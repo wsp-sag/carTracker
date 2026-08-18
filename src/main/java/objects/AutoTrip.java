@@ -9,6 +9,11 @@ public class AutoTrip implements Serializable {
 	private final int id;
 	private final int pnum;
 	private final int hhTripId;
+	// the trip's own stable, order-independent unique ID (matches Trip.getUniqueTripId()) --
+	// use this (via Household.getTripByUniqueId) to resolve the underlying Trip, NOT getHhTripId()/
+	// trips.get(), which is a raw file-read-order position and does not reliably correspond to the
+	// person-grouped order that Household/HouseholdFactory build the trips list in.
+	private final int uniqueTripId;
 	private final int origAct;
 	private final int destAct;
 	private final int origMaz;
@@ -21,12 +26,13 @@ public class AutoTrip implements Serializable {
 	private final float vot;
 	
 	
-	public AutoTrip( int id, int pnum, int indivId, int origAct, int destAct,
-			int origMaz, int destMaz, float depTime,  float plannedTravelTime, 
+	public AutoTrip( int id, int pnum, int indivId, int uniqueTripId, int origAct, int destAct,
+			int origMaz, int destMaz, float depTime,  float plannedTravelTime,
 			float distance, double minActivityDuartion, float vot, int mode ) {
 		this.id = id;
 		this.pnum = pnum;
 		this.hhTripId = indivId;
+		this.uniqueTripId = uniqueTripId;
 		this.origAct = origAct;
 		this.destAct = destAct;
 		this.origMaz = origMaz;
@@ -87,6 +93,10 @@ public class AutoTrip implements Serializable {
 	
 	public int getHhTripId(){
 		return hhTripId;
+	}
+
+	public int getUniqueTripId(){
+		return uniqueTripId;
 	}
 	public int getMode(){
 		return mode;

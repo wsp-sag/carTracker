@@ -70,6 +70,19 @@ public class Household implements Serializable {
 	public List<Trip> getTrips() {
 		return trips;
 	}
+
+	// order-independent lookup by Trip.getUniqueTripId() -- do not use AutoTrip.getHhTripId() as a
+	// position into `trips` (List.get(int)); that value is assigned in raw trip-file read order and
+	// does not reliably match the person-grouped order `trips` is actually built in. Household trip
+	// counts are small (typically single digits), so a linear scan avoids HashMap/Integer-boxing
+	// overhead in this hot LP-setup path with no added memory.
+	public Trip getTripByUniqueId( int uniqueTripId ) {
+		for ( Trip t : trips ) {
+			if ( t.getUniqueTripId() == uniqueTripId )
+				return t;
+		}
+		return null;
+	}
 	
 	public void setHhVehFuelTypes( int[] hhVehFuelTypes ) {
 		this.hhVehFuelTypes = hhVehFuelTypes;

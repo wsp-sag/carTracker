@@ -465,15 +465,15 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	            double[] xij = {-1,-1,-1,-1};
 	           
 	            //Assign auto ID for each auto trip
-	            if((mode == AbmObjectTranslater.SOV_MODE || mode == AbmObjectTranslater.HOV2_DR_MODE || mode == AbmObjectTranslater.HOV3_DR_MODE) ){
-	            	unsatisRes = unsatisDemandResults[trip.getHhAutoTripId()];
-	            	double[] carAllocationForTrip = carAllocationResults[CarAllocation.INDEX_CarAllo][trip.getHhAutoTripId()];                	
-	            	for( int a = 0; a < numAuto; a ++){
-	            		xij[a] = carAllocationForTrip[a];
-	                	if(carAllocationForTrip[a]>threhsoldRoundUp){
-	                		autoId = a + 1;
+			            if((mode == AbmObjectTranslater.SOV_MODE || mode == AbmObjectTranslater.HOV2_DR_MODE || mode == AbmObjectTranslater.HOV3_DR_MODE) ){
+		            		unsatisRes = unsatisDemandResults[trip.getHhAutoTripId()];
+	            		double[] carAllocationForTrip = carAllocationResults[CarAllocation.INDEX_CarAllo][trip.getHhAutoTripId()];
+	            		for( int a = 0; a < numAuto; a ++){
+	            			xij[a] = carAllocationForTrip[a];
+	                		if(carAllocationForTrip[a]>threhsoldRoundUp){
+	                			autoId = a + 1;
+	                		}
 	                	}
-	                }
 	            }
 
 	       	 	//Calculate stats
@@ -483,8 +483,8 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	            
 	            trip.setAllocatedAutoId(autoId);
 	            
-	            float depEarly = (float)depArrResults[CarAllocation.DEP_EARLY][trip.getPnum()][trip.getIndivTripId()];
-	            float depLate = (float)depArrResults[CarAllocation.DEP_LATE][trip.getPnum()][trip.getIndivTripId()];
+            float depEarly = (float)depArrResults[CarAllocation.DEP_EARLY][trip.getPnum()][trip.getIndivTripId()];
+            float depLate = (float)depArrResults[CarAllocation.DEP_LATE][trip.getPnum()][trip.getIndivTripId()];
 	            
 	            totalExtraWaitTime += depLate;
 	            totalEarlyDepTime += depEarly;
@@ -567,27 +567,31 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	        	int carRepoType = -1;
 	        	int origMaz = trip.getOrigMaz();
 	    		int destMaz = trip.getDestMaz();
+	    		// hhTripId is only used below for the output record's own column value (unchanged
+	    		// behavior) -- do NOT use it as a `trips.get()` position, it's a raw file-read-order
+	    		// value that does not reliably match the ascending-pnum order `trips` is built in.
+	    		// Resolve the actual underlying Trip via the stable, order-independent unique ID instead.
 	    		int hhTripId = trip.getHhTripId();
+	    		Trip hhTrip = hh.getTripByUniqueId( trip.getUniqueTripId() );
 	    		int origTaz = geogManager.getMazTazValue(origMaz);
-	    		int destTaz = geogManager.getMazTazValue(destMaz);      		
-	    		
-	    		Trip hhTrip = trips.get(hhTripId);
+	    		int destTaz = geogManager.getMazTazValue(destMaz);
+
 	    		int tripRecNum = hhTrip.getTripRecNum();
-	    		
+
 	    		float tripDistance = trip.getDistance();
-	    		
+
 	    		int tripMode = trip.getMode();
 	    		int tripVehNum = -1;
 	            if ( hhTrip.getVehId() > 0 ) {
 	            	tripVehNum = hhVehNums[ hhTrip.getVehId()-1 ];
 	            }
-	    		
+
 	        	double[] carAllocationForTrip = carAllocationResults[CarAllocation.INDEX_CarAllo][i];
 	        	double[] carAllocationFirstTrip = carAllocationResults[CarAllocation.INDEX_FirstCarTrip][i];
 	        	double[] carAllocationLastTrip = carAllocationResults[CarAllocation.INDEX_LastCarTrip][i];
-	        	
-	            float depEarly = (float)depArrResults[CarAllocation.DEP_EARLY][trip.getPnum()][trips.get(trip.getHhTripId()).getIndivTripId()];
-	            float depLate = (float)depArrResults[CarAllocation.DEP_LATE][trip.getPnum()][trips.get(trip.getHhTripId()).getIndivTripId()];
+
+	            float depEarly = (float)depArrResults[CarAllocation.DEP_EARLY][hhTrip.getPnum()][hhTrip.getIndivTripId()];
+	            float depLate = (float)depArrResults[CarAllocation.DEP_LATE][hhTrip.getPnum()][hhTrip.getIndivTripId()];
 	            float scheduleDepart = trip.getSchedDepart();
 	            float scheduleArrive = scheduleDepart+trip.getSchedTime();
 	            float tripDistanceFromHome = distanceFromHome[destTaz];
@@ -777,8 +781,12 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	        			int ee=1;
 	        			for(int k =i+1; k<aTrips.size();k++){
 	        				AutoTrip nextTrip = aTrips.get(k);
-	        				float nextDepEarly = (float)depArrResults[CarAllocation.DEP_EARLY][nextTrip.getPnum()][trips.get(nextTrip.getHhTripId()).getIndivTripId()];
-	                        float nextDepLate = (float)depArrResults[CarAllocation.DEP_LATE][nextTrip.getPnum()][trips.get(nextTrip.getHhTripId()).getIndivTripId()];
+	        				// resolve via the trip's own stable unique ID (order-independent) -- do not use
+	        				// getHhTripId()/trips.get(), which is a raw file-read-order position that does
+	        				// not reliably match the ascending-pnum order `trips` is actually built in.
+	        				Trip resolvedNextTrip = hh.getTripByUniqueId( nextTrip.getUniqueTripId() );
+	        				float nextDepEarly = (float)depArrResults[CarAllocation.DEP_EARLY][resolvedNextTrip.getPnum()][resolvedNextTrip.getIndivTripId()];
+	        				float nextDepLate = (float)depArrResults[CarAllocation.DEP_LATE][resolvedNextTrip.getPnum()][resolvedNextTrip.getIndivTripId()];
 	                        int nextOrigTaz = geogManager.getMazTazValue(nextTrip.getOrigMaz());
 	                        int nextDestTaz = geogManager.getMazTazValue(nextTrip.getDestMaz());
 	                        destHome = nextTrip.getOrigAct() == PurposeCategories.HOME.getIndex() ? 1 : 0;
@@ -789,10 +797,8 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	                			float departureTime = (scheduleDepart + trip.getSchedTime() + depLate - depEarly) ;
 	                			float arrivalTime = (scheduleDepart + trip.getSchedTime() + depLate - depEarly)+ Float.parseFloat(propertyMap.get("minutes.per.mile"))*autoRecordDistance;
 	                			if(SikForTrip[k]>threhsoldRoundUp){
-	                				float depEarlyNext = (float)depArrResults[CarAllocation.DEP_EARLY][nextTrip.getPnum()][trips.get(nextTrip.getHhTripId()).getIndivTripId()];
-	                	            float depLateNext  = (float)depArrResults[CarAllocation.DEP_LATE][nextTrip.getPnum()][trips.get(nextTrip.getHhTripId()).getIndivTripId()];
-	                				departureTime = (nextTrip.getSchedDepart() + depLateNext - depEarlyNext) - Float.parseFloat(propertyMap.get("minutes.per.mile"))*autoRecordDistance;
-	                				arrivalTime = (nextTrip.getSchedDepart() + depLateNext - depEarlyNext);
+	                				departureTime = (nextTrip.getSchedDepart() + nextDepLate - nextDepEarly) - Float.parseFloat(propertyMap.get("minutes.per.mile"))*autoRecordDistance;
+	                				arrivalTime = (nextTrip.getSchedDepart() + nextDepLate - nextDepEarly);
 	                			}
 	                			tripDistanceFromHome = distanceFromHome[geogManager.getMazTazValue(nextTrip.getOrigMaz())];
 	                			tripDistanceFromHomeToOrig = distanceFromHome[geogManager.getMazTazValue(trip.getDestMaz())];

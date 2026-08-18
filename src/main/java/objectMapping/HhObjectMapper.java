@@ -104,6 +104,7 @@ public class HhObjectMapper implements HhObjectMapperIf {
 	    	int[] autoTripOrigTaz = null;
 	    	int[] autoTripDestTaz = null;
 	    	int[] autoTripPersonTripId = null;
+	    	int[] autoTripUniqueTripId = null;
 	    	float[] autoTripDistance = null;
 	    	int[] autoTripModes = null;
 	    	float[] autoVot = null;
@@ -116,6 +117,7 @@ public class HhObjectMapper implements HhObjectMapperIf {
 		    	autoTripOrigTaz = abmData.getAutoTripsOrigTaz();
 		    	autoTripDestTaz = abmData.getAutoTripsDestTaz();
 		    	autoTripPersonTripId = abmData.getAutoTripsPersonTripId();
+		    	autoTripUniqueTripId = abmData.getAutoTripsUniqueTripId();
 		    	autoTripDistance = abmData.getAutoTripsDistance();
 		    	autoTripModes = abmData.getAutoTripsMode();
 		    	autoVot = abmData.getAutoValueOfTime();
@@ -125,7 +127,7 @@ public class HhObjectMapper implements HhObjectMapperIf {
 	        		numJointTrips, jointTrips, orgActivityType, destActivityType, origMazs, destMazs, tripModes, numCompletedTrips, tripPlannedDeparture, tripPlannedTime, tripPlannedTime,
 	        		tripDistance, valueOfTime, tripRecNums, assignedTripModes, tripVehIds, linkedToIds, jointDriverPnums, minActDurMap, numAutos,
 	        		tripHhAutoTripId,autoTripPnum,autoOrigPurp,autoDestPurp,autoTripDepart,autoTripTravelTime,autoTripOrigTaz,autoTripDestTaz,
-	        		autoTripPersonTripId,autoTripDistance, homeMaz,abmData.getNumberOfAutoTrips(),ifAvHh, actvityDurations,autoTripModes,autoVot);
+	        		autoTripPersonTripId,autoTripUniqueTripId,autoTripDistance, homeMaz,abmData.getNumberOfAutoTrips(),ifAvHh, actvityDurations,autoTripModes,autoVot);
 	        	
 	    	hh.setNumIndivTripRecords( abmData.getNumTripRecords() );
 	    	hh.setNumJointTripRecords( numHhJointTrips );

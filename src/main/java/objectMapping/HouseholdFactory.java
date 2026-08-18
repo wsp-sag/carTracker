@@ -40,7 +40,7 @@ public class HouseholdFactory {
 			float[][] tripPlannedDeparture, float[][] tripPlannedTime, float[][] tripExpectedTime, float[][] tripDistance, float[][] valueOfTime, int[][] tripRecNums, int[][] assignedTripModes,
 			int[][] tripVehIds, int[][] linkedToIds, int[][] jointDriverPnums, Map<Long, Double> minActDurMap, int numAutos, int[][]tripHhAutoTripId , int[] autoTripPnum,
 			int[] autoOrigPurp,int[] autoDestPurp,float[] autoTripDepart,float[] autoTripTravelTime,
-			int[] autoTripOrigTaz,int[] autoTripDestTaz,int[] autoTripPersonTripId,float[] autoTripDistance, int homeMaz, int numAutoTrips, int ifAvHh, float[][] actvityDurations, int[] autoModes, float[] autoVot) {
+			int[] autoTripOrigTaz,int[] autoTripDestTaz,int[] autoTripPersonTripId,int[] autoTripUniqueTripId,float[] autoTripDistance, int homeMaz, int numAutoTrips, int ifAvHh, float[][] actvityDurations, int[] autoModes, float[] autoVot) {
 
 		Map<Integer, int[][]> jointParties = new HashMap<Integer, int[][]>();
 		int[][] uniqueTripIds = createUniqueTripIds( numHhMembers, numTrips );		
@@ -81,7 +81,7 @@ public class HouseholdFactory {
 			for ( int i=1; i < autoTripPnum.length; i++ ) {
 				double minActDur = Float.parseFloat(propertyMap.get("min.activity.duration"));
 				
-				AutoTrip aTrip = new AutoTrip(i,autoTripPnum[i],autoTripPersonTripId[i],autoOrigPurp [i],autoDestPurp [i],autoTripOrigTaz [i],
+				AutoTrip aTrip = new AutoTrip(i,autoTripPnum[i],autoTripPersonTripId[i],autoTripUniqueTripId[i],autoOrigPurp [i],autoDestPurp [i],autoTripOrigTaz [i],
 						autoTripDestTaz [i],autoTripDepart [i],autoTripTravelTime [i],autoTripDistance[i],minActDur,autoVot[i], autoModes[i]);
 				autoTripList.add(aTrip);
 			}
