@@ -15,8 +15,6 @@ import org.jppf.client.JPPFClient;
 import org.jppf.node.protocol.DataProvider;
 import org.jppf.node.protocol.MemoryMapDataProvider;
 
-import com.google.ortools.Loader;
-//import com.google.ortools.Loader;
 import com.pb.common.util.ResourceUtil;
 
 import accessibility.GeographyManager;

@@ -11,7 +11,6 @@ import java.util.Properties;
 import org.apache.log4j.Logger;
 
 import com.google.ortools.linearsolver.MPObjective;
-import com.google.ortools.Loader;
 import com.google.ortools.linearsolver.MPConstraint;
 import com.google.ortools.linearsolver.MPSolver;
 import com.google.ortools.linearsolver.MPVariable;
@@ -248,8 +247,7 @@ public class CarAllocation
                 //logger2.info( "node process java.class.path = " + (String) sysProps.get("java.class.path") );
                 
                 //Map<String,String> envMap = System.getenv();
-                Loader.loadNativeLibraries();
-//        	      System.loadLibrary("jniortools");
+                System.loadLibrary("jniortools");
             	CarAllocatorMain.ortoolsLibLoaded = true;
         	}
     	}
