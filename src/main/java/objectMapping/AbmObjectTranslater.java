@@ -419,9 +419,15 @@ public class AbmObjectTranslater {
 		for ( int i=1; i < tripRecNums.length; i++ ) {
 			tripNum = uniqueTripIds[i];
 			if ( jointTripIds[tripNum] > 0 ) {
-				int id = jointDriverTripId.get( jointTripIds[tripNum] );			
-				linkedTripIds[tripNum] = uniqueTripIds[id];		
-				tripsHhAutoTripId[tripNum] = tripsHhAutoTripId[id];
+				int id = jointDriverTripId.get( jointTripIds[tripNum] );
+				linkedTripIds[tripNum] = uniqueTripIds[id];
+				// only borrow the "designated driver"'s (tripParty[0]'s) hhAutoTripId for rows that
+				// aren't themselves a genuine auto trip -- tripParty[0] is not guaranteed to be the
+				// actual vehicle operator (the party member whose OWN row is SOV/HOV2/HOV3-mode), so
+				// blindly overwriting here could zero out the real auto trip's own correctly-computed
+				// hhAutoTripId if a different party member happens to be listed first.
+				if ( tripsHhAutoTripId[tripNum] == 0 )
+					tripsHhAutoTripId[tripNum] = tripsHhAutoTripId[id];
 			}
 		}
 		
