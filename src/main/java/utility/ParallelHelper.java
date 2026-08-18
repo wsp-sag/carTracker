@@ -158,10 +158,13 @@ public class ParallelHelper {
 	
 		    		packetCount++;
 		    	}
-			    	
+
+		        // JPPF rejects empty jobs (IllegalStateException: job cannot be empty), which happens
+		        // whenever there are fewer packets than numJobs, so only submit/await jobs that got tasks.
+		        jobList.removeIf( job -> job.getJobTasks().isEmpty() );
 
 		        for ( JPPFJob job : jobList )
-				    myClient.submitJob( job ); 
+				    myClient.submitJob( job );
 
 		        List<Task<?>> results = new ArrayList<>();
 		        int n = 0;
