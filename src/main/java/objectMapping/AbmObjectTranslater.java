@@ -953,7 +953,8 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 		int pnum = 1;
 		for ( List<String> record : personRecords ) {
 			String usualCarIdFieldValue = record.get( persRecordIndex );
-			int usualCarsForPerson = Integer.valueOf( usualCarIdFieldValue );
+			//int usualCarsForPerson = Integer.valueOf( usualCarIdFieldValue );
+			int usualCarsForPerson = Parsing.getOneIndexValueFromExportString(usualCarIdFieldValue);		
 			usualCars[pnum++] = usualCarsForPerson; 
 		}
 		

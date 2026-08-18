@@ -71,7 +71,18 @@ public class Parsing implements Serializable {
 		return returnArray;
 
 	}
-
+	
+	public static int getOneIndexValueFromExportString(String exportString) {
+		String[] values = exportString.split(",");
+		for (int i = 0; i < values.length; i++) {
+			if ("1".equals(values[i].trim())) {
+				return i + 1; // 1-based index
+			}
+		}
+		return 0; // no 1 found
+	}
+	
+	
 	public static int[] getOneDimensionalIntArrayValuesFromExportString(String exportString) {
 
 		List<Integer> valueList = new ArrayList<Integer>();
