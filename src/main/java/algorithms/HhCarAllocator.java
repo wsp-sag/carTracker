@@ -358,10 +358,14 @@ public class HhCarAllocator implements HhCarAllocatorIf, Serializable {
                 	optimalSolutionIntegerizedFound = false;
                 	if(!optimalSolutionIntegerizedFound){
                 		logger.info("LP failed for after iterative integerizing for hh = "+ hh.getId());
-                		sikjFixFlag[maxJS][maxIS][maxKS] = 1;
+                		if(maxIS>0 && maxJS > 0 && maxKS > 0){
+        				sikjFixFlag[maxJS][maxIS][maxKS] = 1;
         				sikjIntergerization[maxJS][maxIS][maxKS] = 0;
+                		}
+                		if(maxIG>0 && maxJG > 0 && maxKG > 0){
         				gikjFixFlag[maxJG][maxIG][maxKG] = 1;
         				gikjIntergerization[maxJG][maxIG][maxKG] = 0;
+                		}
         				solver = allocator.setupLp( hh,logProgress, MAX_SIMULATION_TIME[iterNum] ,xijIntergerization,xijFixFlag,sikjIntergerization,sikjFixFlag,gikjIntergerization,gikjFixFlag,solverType,iterNumForIntegerizing);
                     	optimalSolutionIntegerizedFound = allocator.solveLp( solver,iterNumForIntegerizing );
                 	}
