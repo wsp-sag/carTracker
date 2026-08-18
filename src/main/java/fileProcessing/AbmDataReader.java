@@ -39,12 +39,12 @@ public class AbmDataReader {
 	        String line = inStream.readLine();
             //StringTokenizer st = new StringTokenizer( line, delimSet );
             
-	        List<String> myFieldValues = getFieldValuesFromLine( line );
-	        
+	        List<String> myHeaderValues = getHeaderFields( line );
+	        	        
             int hhIdIndex = -1;
             Map<String,Integer> headerFieldIndices = new HashMap<>();
-            for ( int i=0; i < myFieldValues.size(); i++ ) {
-            	String name = myFieldValues.get(i);
+            for ( int i=0; i < myHeaderValues.size(); i++ ) {
+            	String name = myHeaderValues.get(i);
             	if ( name.equalsIgnoreCase( hhIdLabel ) )
             		hhIdIndex = i;            	
             	headerFieldIndices.put(name, i);
@@ -73,7 +73,7 @@ public class AbmDataReader {
             	
             	
                 //st = new StringTokenizer( line, delimSet );
-    	        myFieldValues = getFieldValuesFromLine( line );
+            	List<String> myFieldValues = getFieldValuesFromLine( line );
     	        int hhIdValue = Integer.valueOf( myFieldValues.get(hhIdIndex) );
                 
 //	        	hhIdValue = -1;
@@ -479,11 +479,21 @@ public class AbmDataReader {
     	return returnValues;
     	
     }
-
+    
+    private static List<String> getHeaderFields( String line ) {
+    	List<String> fieldValues = new ArrayList<>();
+    	String[] lineItems = line.split(",");
+    	
+    	for ( String item : lineItems ) { 
+    		fieldValues.add( item.trim() );
+    	}
+    	return fieldValues;
+    }
 
     private static List<String> getFieldValuesFromLine( String line ) {
     	List<String> fieldValues = new ArrayList<>();
     	String[] lineItems = line.split(REGEX);
+    	
     	for ( String item : lineItems ) { 
     		if( item.equals("\"[") || item.equals("]\"") )
     			continue;
@@ -492,3 +502,4 @@ public class AbmDataReader {
     	return fieldValues;
     }
 }
+
