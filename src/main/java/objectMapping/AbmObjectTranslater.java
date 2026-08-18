@@ -73,6 +73,12 @@ public class AbmObjectTranslater {
 	public static final String HH_VEH_FUEL_TYPES_KEY = "hh.veh.fuel.types";
 	public static final String HH_VEH_BODY_TYPES_KEY = "hh.veh.body.types";
 	public static final String HH_VEH_NUMS_KEY = "hh.veh.nums";
+
+	// used when hh.veh.fuel.types / hh.veh.body.types are not configured (client data has no per-vehicle
+	// fuel/body type), so every vehicle is assigned this uniform type: "gd" (gasoline) / "car" (regular car),
+	// matching indices into VehicleTypePreferences.FUEL_TYPE_NAMES / BODY_TYPE_NAMES.
+	public static final int DEFAULT_VEH_FUEL_TYPE_CODE = 2;
+	public static final int DEFAULT_VEH_BODY_TYPE_CODE = 3;
 	public static final String HH_AV_FLAG_KEY="hh.av.flag.field";
 	public static final String PERSON_TYPE_FIELD_KEY = "person.type.field";
 	public static final String PERSON_USUAL_CAR_ID_FIELD_KEY = "person.usualcar.id.field";
@@ -956,57 +962,77 @@ private List<Object> getAutoTripInformation( int hhid, Map<Integer, Float> exper
 	}
 	
 	public int[] getHhVehFuelTypes( int hhid ) {
-		
+
+		if ( hhVehFuelTypesField == null ) {
+			int[] fuelTypes = new int[ getNumAutos( hhid ) ];
+			Arrays.fill( fuelTypes, DEFAULT_VEH_FUEL_TYPE_CODE );
+			return fuelTypes;
+		}
+
 		// get a map of file field numbers to tripRecord field positions
 		Map<String,Integer> fieldIndexMap = dataStore.getHhFieldIndexMap();
 		int fuelTypesFieldIndex = fieldIndexMap.get(hhVehFuelTypesField);
-				
+
 		List<List<String>> hhecords = dataStore.getHouseholdRecords(hhid);
 		String fuelTypesString = "";
-	
+
 		for ( List<String> record : hhecords ) {
 			fuelTypesString = record.get( fuelTypesFieldIndex );
 		}
-		
+
 		int[] fuelTypes = Parsing.getOneDimensionalIntArrayValuesFromExportString( fuelTypesString );
 		return fuelTypes;
-		
+
 	}
 
 	public int[] getHhVehBodyTypes( int hhid ) {
-		
+
+		if ( hhVehBodyTypesField == null ) {
+			int[] bodyTypes = new int[ getNumAutos( hhid ) ];
+			Arrays.fill( bodyTypes, DEFAULT_VEH_BODY_TYPE_CODE );
+			return bodyTypes;
+		}
+
 		// get a map of file field numbers to tripRecord field positions
 		Map<String,Integer> fieldIndexMap = dataStore.getHhFieldIndexMap();
 		int bodyTypesFieldIndex = fieldIndexMap.get(hhVehBodyTypesField);
-				
+
 		List<List<String>> hhecords = dataStore.getHouseholdRecords(hhid);
 		String bodyTypesString = "";
-	
+
 		for ( List<String> record : hhecords ) {
 			bodyTypesString = record.get( bodyTypesFieldIndex );
 		}
-		
+
 		int[] bodyTypes = Parsing.getOneDimensionalIntArrayValuesFromExportString( bodyTypesString );
 		return bodyTypes;
-		
+
 	}
 
 	public int[] getHhVehNums( int hhid ) {
-		
+
+		if ( hhVehNumsField == null ) {
+			int numAutos = getNumAutos( hhid );
+			int[] vehNums = new int[ numAutos ];
+			for ( int j = 0; j < numAutos; j++ )
+				vehNums[j] = j + 1;
+			return vehNums;
+		}
+
 		// get a map of file field numbers to tripRecord field positions
 		Map<String,Integer> fieldIndexMap = dataStore.getHhFieldIndexMap();
 		int vehNumFieldIndex = fieldIndexMap.get(hhVehNumsField);
-				
+
 		List<List<String>> hhecords = dataStore.getHouseholdRecords(hhid);
 		String vehNumString = "";
-	
+
 		for ( List<String> record : hhecords ) {
 			vehNumString = record.get( vehNumFieldIndex );
 		}
-		
+
 		int[] vehNums = Parsing.getOneDimensionalIntArrayValuesFromExportString( vehNumString );
 		return vehNums;
-		
+
 	}
 
 	public int getNumAutos( int hhid ) {
