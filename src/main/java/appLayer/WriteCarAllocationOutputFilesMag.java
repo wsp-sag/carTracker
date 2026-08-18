@@ -195,8 +195,8 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
     	tripsByVehTypeByPersonType = new int[modes.length][vehTypeIndexMap.values().size()][MAX_PERSON_TYPE+1];
     	tripsByVehTypeByDistanceBin = new int[modes.length][vehTypeIndexMap.values().size()][distanceBoundaries.length];
 
-		unsatisfiedTripModeCode = Integer.parseInt(propertyMap.get("unsatisfied.trip.mode.code"));
-    	
+    	String unsatisfiedTripModeCodeStr = propertyMap.get("unsatisfied.trip.mode.code");
+    	unsatisfiedTripModeCode = ( unsatisfiedTripModeCodeStr != null ) ? Integer.parseInt( unsatisfiedTripModeCodeStr ) : -1;
 		
         String outputProbCarChangeFileName = propertyMap.get("output.hh.car.change.prob.file");
 		globalLoop = Integer.parseInt(propertyMap.get("global.loop"));
