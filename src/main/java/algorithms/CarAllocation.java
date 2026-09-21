@@ -436,13 +436,14 @@ public class CarAllocation
 					int vehTypeCategory = vehicleTypePreferences.getCategory(fuelType, bodyType);
 
 					
-	        		float repoCostForHh = vehicleTypePreferences.getOperatingCostDisutil(fuelType, bodyType);
+	        		// operating cost comes from the properties file (fuel type base cost x body type multiplier); the carTypePreferences.xls operating cost column was removed
+	        		//float repoCostForHh = vehicleTypePreferences.getOperatingCostDisutil(fuelType, bodyType);
 	        		
 	    			// fuel type indices are defined as gas=2, hyb=3, ev=4, so subtract 2 to get indices for lists: 0, 1, 2
 	    			int ftIndex = fuelType - 2;
 	    			// body type indices are defined as 1-6, so subtract 1 to get indices for lists: 0-5
 	    			int btIndex = bodyType - 1;
-	    			repoCostForHh = (float)(fuelTypeBaseCosts.get(ftIndex) * fuelTypeBodyTypeOpCostMulipliers.get(ftIndex).get(btIndex));
+	    			float repoCostForHh = (float)(fuelTypeBaseCosts.get(ftIndex) * fuelTypeBodyTypeOpCostMulipliers.get(ftIndex).get(btIndex));
 	        		
 	        		float autoOperatingCost = repoCostForHh;
 	        		float costOfCurrentTrip = aTrip.getDistance()*autoOperatingCost;
@@ -590,7 +591,13 @@ public class CarAllocation
 
 	        			int fuelType = hhVehFuelTypes[j];
 	        			int bodyType = hhVehBodyTypes[j];
-		        		float repoCostForHh = vehicleTypePreferences.getOperatingCostDisutil(fuelType, bodyType);
+		        		// operating cost comes from the properties file (fuel type base cost x body type multiplier); the carTypePreferences.xls operating cost column was removed
+		        		//float repoCostForHh = vehicleTypePreferences.getOperatingCostDisutil(fuelType, bodyType);
+		        		// fuel type indices are defined as gas=2, hyb=3, ev=4, so subtract 2 to get indices for lists: 0, 1, 2
+		        		int ftIndex = fuelType - 2;
+		        		// body type indices are defined as 1-6, so subtract 1 to get indices for lists: 0-5
+		        		int btIndex = bodyType - 1;
+		        		float repoCostForHh = (float)(fuelTypeBaseCosts.get(ftIndex) * fuelTypeBodyTypeOpCostMulipliers.get(ftIndex).get(btIndex));
 	        			
 		        		float reposCostToHome = repoCostForHh*(distanceHomeToNextOrig+distanceToHomeFromEndOfCurrent);
 		        		float reposCostToNextTripOrigSik = 0;

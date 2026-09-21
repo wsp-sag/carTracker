@@ -61,7 +61,8 @@ public class VehicleTypePreferences implements Serializable {
     private List<List<Float>> modePref = new ArrayList<>();
     private List<List<Float>> persTypePref = new ArrayList<>();
     private List<Float> distPref = new ArrayList<>();
-    private List<Float> operatingCost = new ArrayList<>();
+    // operating cost column removed from the spreadsheet; operating cost now comes from fuel type base costs and body type multipliers in the properties file
+    //private List<Float> operatingCost = new ArrayList<>();
 	
     private Map<String,Map<String,Integer>> indexLookup = new HashMap<>();
     
@@ -93,10 +94,11 @@ public class VehicleTypePreferences implements Serializable {
     	return distPref.get(index);
     }
 
-    public float getOperatingCostDisutil( int fuelTypeIndex, int bodyTypeIndex ) {
-    	int index = indexLookup.get(FUEL_TYPE_NAMES[fuelTypeIndex]).get(BODY_TYPE_NAMES[bodyTypeIndex]);
-    	return operatingCost.get(index);
-    }
+    // operating cost column removed from the spreadsheet; operating cost now comes from fuel type base costs and body type multipliers in the properties file
+    //public float getOperatingCostDisutil( int fuelTypeIndex, int bodyTypeIndex ) {
+    	//int index = indexLookup.get(FUEL_TYPE_NAMES[fuelTypeIndex]).get(BODY_TYPE_NAMES[bodyTypeIndex]);
+    	//return operatingCost.get(index);
+    //}
 
     public int getCategory( int fuelTypeIndex, int bodyTypeIndex ) {
     	int dummy = 0;
@@ -251,9 +253,10 @@ public class VehicleTypePreferences implements Serializable {
             distPref.add( cellContent.length() == 0 ? 0 : Float.valueOf(cellContent) );
             
             // operating cost
-            cell = sheet.getCell( col, row );
-            cellContent = cell.getContents().trim();
-            operatingCost.add( cellContent.length() == 0 ? 0 : Float.valueOf(cellContent) );
+            // operating cost column removed from the spreadsheet; operating cost now comes from fuel type base costs and body type multipliers in the properties file
+            //cell = sheet.getCell( col, row );
+            //cellContent = cell.getContents().trim();
+            //operatingCost.add( cellContent.length() == 0 ? 0 : Float.valueOf(cellContent) );
             
             row++;
             col = 0;
