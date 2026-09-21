@@ -76,10 +76,10 @@ public class Parsing implements Serializable {
 		String[] values = exportString.split(",");
 		for (int i = 0; i < values.length; i++) {
 			if ("1".equals(values[i].trim())) {
-				return i + 1; // 1-based index
+				return i; // 0-based index of the 1, i.e. the household vehicle index j used by the allocator
 			}
 		}
-		return 0; // no 1 found
+		return -1; // no 1 found: no usual car (callers test for a negative value)
 	}
 	
 	
