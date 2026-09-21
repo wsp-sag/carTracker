@@ -638,8 +638,9 @@ public class CarAllocation
 
 		               
 	        			ofVarsIJK[INDEX_SameTripParkDi ][i][k][j] = solver.makeNumVar( lowerBoundS, uppperBoundS, ( name = "ParkDi_"+i+"_"+k+"_"+j ) );
-	                    objective.setCoefficient( ofVarsIJK[INDEX_SameTripParkDi][i][k][j], reposCostToNextTripOrigSik + parkCostSik);
-	                    ofCoeffList.add( (float) (reposCostToNextTripOrigSik + parkCostSik) );
+	                    // tiny reward (objective is minimized) so that tied ParkDi choices resolve deterministically toward ParkDi = 1
+	                    objective.setCoefficient( ofVarsIJK[INDEX_SameTripParkDi][i][k][j], reposCostToNextTripOrigSik + parkCostSik + (-0.00001));
+	                    ofCoeffList.add( (float) (reposCostToNextTripOrigSik + parkCostSik + (-0.00001)) );
 	            		variableNameList.add( name );
 	            		//ofVarsIJK[INDEX_SameTripParkDi ][i][k][j].setInteger(true);
 
