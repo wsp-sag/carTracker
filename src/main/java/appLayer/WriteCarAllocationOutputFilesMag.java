@@ -615,6 +615,7 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	        	   	double[] SikForTrip = carLinkingResults[CarAllocation.INDEX_SameTripParkDi][j][i];
 	            	double[] GikForTrip = carLinkingResults[CarAllocation.INDEX_SameTripParkOk][j][i];
 	            	double[] HikForTrip = carLinkingResults[CarAllocation.INDEX_SameTripParH][j][i];
+	            	double[] ZikForTrip = carLinkingResults[CarAllocation.INDEX_CarLink][j][i];
 	        		int carTripAllocation =0;
 	        		if(carAllocationForTrip[j]>threhsoldRoundUp)
 	        			carTripAllocation = 1;
@@ -780,6 +781,9 @@ public class WriteCarAllocationOutputFilesMag implements WriteCarAllocationOutpu
 	        			int e=1;
 	        			int ee=1;
 	        			for(int k =i+1; k<aTrips.size();k++){
+	        				// only consider trips this vehicle is actually linked to (CarLink selected)
+	        				if(! (ZikForTrip[k]>threhsoldRoundUp) )
+	        					continue;
 	        				AutoTrip nextTrip = aTrips.get(k);
 	        				// resolve via the trip's own stable unique ID (order-independent) -- do not use
 	        				// getHhTripId()/trips.get(), which is a raw file-read-order position that does
