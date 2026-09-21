@@ -368,13 +368,16 @@ public class AbmObjectTranslater {
 			
 
 				String departValue = record.get( fieldIndexMap.get(tripDepartMinuteField) );
-				float depart = Math.round(Float.parseFloat( departValue )*100)/100;
+				//float depart = Math.round(Float.parseFloat( departValue )*100)/100;  // int division: truncated to whole minutes
+				float depart = Float.parseFloat( departValue );
 				
 				String arriveValue = record.get( fieldIndexMap.get(tripArriveMinuteField) );
-				float arrive =  Math.round(Float.parseFloat( arriveValue )*100)/100;
+				//float arrive =  Math.round(Float.parseFloat( arriveValue )*100)/100;  // int division: truncated to whole minutes
+				float arrive =  Float.parseFloat( arriveValue );
 
 				String durationValue = record.get( fieldIndexMap.get(actDurationField) );
-				activityDuration[tripNum] =  (Math.round(Float.parseFloat( durationValue )*100)/100);		
+				//activityDuration[tripNum] =  (Math.round(Float.parseFloat( durationValue )*100)/100);  // int division: truncated to whole minutes
+				activityDuration[tripNum] =  Float.parseFloat( durationValue );		
 				
 				//MAG String timeValue = record.get( TRIP_PLANNED_TRAVEL_MINUTES_FIELD_INDEX );
 				//MAG indivPlannedTravelTimes[tripNum] = (int)( Float.parseFloat( timeValue ) );
