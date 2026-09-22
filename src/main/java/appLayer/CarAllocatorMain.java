@@ -82,7 +82,7 @@ public class CarAllocatorMain {
 	    logger.info( "finished creating ABM data store ..." );
 	    
         if(runDistributed)
-        	runCarAllocation_v2_distributed( propertyMap, logger, parameterInstance, minHhId, maxHhId, geogManager, socec, vehicleTypePreferences, writer);
+        	runCarAllocation_v2_distributed( propertyMap, logger, parameterInstance, abmDataStore, minHhId, maxHhId, geogManager, socec, vehicleTypePreferences, writer);
         else        	
         	runCarAllocation_v2_mono(propertyMap, logger, parameterInstance, abmDataStore, minHhId, maxHhId, geogManager, socec, vehicleTypePreferences, writer);
         
@@ -94,7 +94,7 @@ public class CarAllocatorMain {
 
 	
 	private void runCarAllocation_v2_distributed( Map<String, String> propertyMap, Logger logger, ParameterReader parameterInstance,
-			int minHhId, int maxHhId, GeographyManager geogManager, SocioEconomicDataManager socec,
+			AbmDataStore abmDataStore, int minHhId, int maxHhId, GeographyManager geogManager, SocioEconomicDataManager socec,
 			VehicleTypePreferences vehicleTypePreferences, WriteCarAllocationOutputFilesIf writer ) {
 					    
 
@@ -102,7 +102,6 @@ public class CarAllocatorMain {
 		int numHhPartitions = Integer.valueOf( propertyMap.get( GlobalProperties.NUM_HH_PARTITIONS.toString() ) );
 		int numHhsPerPartition = (maxHhId - minHhId)/numHhPartitions;
 
-	    AbmDataStore abmDataStore = new AbmDataStore( propertyMap );
 
 		DataProvider dataProvider = new MemoryMapDataProvider();
         dataProvider.setParameter( "parameterInstance", parameterInstance );

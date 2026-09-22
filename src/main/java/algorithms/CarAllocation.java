@@ -786,7 +786,7 @@ public class CarAllocation
     		AutoTrip aTrip = autoTrips.get(i);
 
     		rhsLP2[INDEX_1_1][i] = 1;
-    		constraintsLP2[INDEX_1_1][i] = solver.makeConstraint(rhsLP2[INDEX_1_1][i], rhsLP2[INDEX_1_1][i], (name = "Const_1_1"+i));
+    		constraintsLP2[INDEX_1_1][i] = solver.makeConstraint(rhsLP2[INDEX_1_1][i], rhsLP2[INDEX_1_1][i], (name = "Const_1_1_"+i));
     		constraintNameList.add( name );
     		for ( int j=0; j < numAutos; j++ )     {
     			constraintsLP2[INDEX_1_1][i].setCoefficient( ofVarsIJ[INDEX_CarAllo][i][j], 1.0);
@@ -953,9 +953,11 @@ public class CarAllocation
     	for ( int j=0; j < numAutos; j++ )     {
     		rhsLP6[INDEX_5_1][j] = 1;
     		constraintsLP6[INDEX_5_1][j] = solver.makeConstraint(rhsLP6[INDEX_5_1][j] , rhsLP6[INDEX_5_1][j], (name = "Const_5_1"+"_"+j));
+    		constraintNameList.add( name );
 
     		rhsLP6[INDEX_5_2][j] = 1;
     		constraintsLP6[INDEX_5_2][j] = solver.makeConstraint(rhsLP6[INDEX_5_1][j] , rhsLP6[INDEX_5_2][j], (name = "Const_5_2"+"_"+j));
+    		constraintNameList.add( name );
 
     		for ( int i=0; i < autoTrips.size();i++ ) {
     			constraintsLP6[INDEX_5_1][j].setCoefficient(ofVarsIJ[INDEX_FirstCarTrip][i][j], 1);

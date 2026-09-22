@@ -60,6 +60,7 @@ public class HhCarAllocator implements HhCarAllocatorIf, Serializable {
 		int iterNumForIntegerizing = 0;
         boolean optimalSolutionFound = false;
 
+		try {
         //System.out.println("household = " + hh.getId());
         //solverType = "CLP_LINEAR_PROGRAMMING";
 		solverType = "CBC_MIXED_INTEGER_PROGRAMMING";
@@ -475,6 +476,14 @@ public class HhCarAllocator implements HhCarAllocatorIf, Serializable {
             iterNum++;
         	
         }
+		}   // end of try
+		catch ( Exception e ) {
+			// keep going for this household: fall through to the same result extraction used when the LP
+			// fails (unsolved results are written as unsatisfied), but log the household id and full stack trace
+			logger.error( "Exception caught for hhid = " + hh.getId(), e );
+			if ( solver == null )
+				throw new RuntimeException( "Exception before any LP was set up for hhid = " + hh.getId(), e );
+		}
 		
         
                 
