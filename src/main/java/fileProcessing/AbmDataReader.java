@@ -494,8 +494,12 @@ public class AbmDataReader {
     	List<String> fieldValues = new ArrayList<>();
     	String[] lineItems = line.split(REGEX);
     	
-    	for ( String item : lineItems ) { 
-    		if( item.equals("\"[") || item.equals("]\"") )
+    	for ( String item : lineItems ) {
+    		// a single-element array field like [4] has no comma, so the CSV writer doesn't
+    		// quote it -- the split then leaves bare [ and ] as their own tokens (as opposed
+    		// to the quoted "[ and ]" tokens the multi-element case produces), which were not
+    		// being dropped, silently shifting every later column in the row out of position
+    		if( item.equals("\"[") || item.equals("]\"") || item.equals("[") || item.equals("]") )
     			continue;
     		fieldValues.add( item.trim() );
     	}
